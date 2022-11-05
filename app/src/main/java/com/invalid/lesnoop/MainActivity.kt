@@ -240,7 +240,7 @@ fun Body(service: () -> ScanSnoopService) {
                 composable(NAV_SCAN) {
                     model.topText.value = "Nearby devices"
                     ScopePermissions(modifier = Modifier.fillMaxSize()) {
-                        ThingList(padding, model)
+                        DeviceList(padding, model)
                     }
                 }
                 composable(NAV_DB) {
