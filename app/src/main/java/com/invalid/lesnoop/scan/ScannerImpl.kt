@@ -109,12 +109,14 @@ class ScannerImpl @Inject constructor(
     }
 
     private fun insertResult(scanResult: ScanResult): Completable {
-        val result = DbScanResult(scanResult)
-        return database.insertScanResult(result)
-            .doOnSubscribe { Log.v(NAME, "inserting scan result") }
-            .doOnComplete { Log.v(NAME, "insert complete") }
-            .doOnError { e -> Log.v(NAME, "insert error $e") }
-            .subscribeOn(dbScheduler)
+        return tagLocation(scanResult).flatMapCompletable { result ->
+            database.insertScanResult(result)
+                .doOnSubscribe { Log.v(NAME, "inserting scan result") }
+                .doOnComplete { Log.v(NAME, "insert complete") }
+
+                .doOnError { e -> Log.v(NAME, "insert error $e") }
+                .subscribeOn(dbScheduler)
+        }
     }
 
     private fun discoverServices(device: RxBleDevice): Completable {
