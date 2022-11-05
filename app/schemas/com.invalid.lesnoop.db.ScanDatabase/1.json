@@ -1,0 +1,164 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "f01941afd4b9f46802b49a4a55890dda",
+    "entities": [
+      {
+        "tableName": "scan_results",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT, `macAddress` TEXT NOT NULL, `name` TEXT, `rssi` INTEGER NOT NULL, `scanRecord` BLOB NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "macAddress",
+            "columnName": "macAddress",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "rssi",
+            "columnName": "rssi",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scanRecord",
+            "columnName": "scanRecord",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "uid"
+          ],
+          "autoGenerate": true
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "characteristics",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT, `parentService` INTEGER, `uuid` BLOB NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "parentService",
+            "columnName": "parentService",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "uid"
+          ],
+          "autoGenerate": true
+        },
+        "indices": [
+          {
+            "name": "index_characteristics_uuid_parentService",
+            "unique": true,
+            "columnNames": [
+              "uuid",
+              "parentService"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_characteristics_uuid_parentService` ON `${TABLE_NAME}` (`uuid`, `parentService`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "discovered_services",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` BLOB NOT NULL, PRIMARY KEY(`uid`))",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "uid"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "descriptors",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT, `parentCharacteristic` INTEGER, `uuid` BLOB NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "parentCharacteristic",
+            "columnName": "parentCharacteristic",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "uid"
+          ],
+          "autoGenerate": true
+        },
+        "indices": [
+          {
+            "name": "index_descriptors_parentCharacteristic_uuid",
+            "unique": true,
+            "columnNames": [
+              "parentCharacteristic",
+              "uuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_descriptors_parentCharacteristic_uuid` ON `${TABLE_NAME}` (`parentCharacteristic`, `uuid`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f01941afd4b9f46802b49a4a55890dda')"
+    ]
+  }
+}
