@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Criteria
-import android.location.Location
 import android.location.LocationManager
 import android.os.Build
 import android.util.Log
@@ -13,7 +12,6 @@ import com.invalid.lesnoop.Module
 import com.invalid.lesnoop.ScanScope
 import com.invalid.lesnoop.ScanSubcomponent
 import com.invalid.lesnoop.db.ScanResultDao
-import com.invalid.lesnoop.db.entity.DbLocation
 import com.invalid.lesnoop.db.entity.DbScanResult
 import com.invalid.lesnoop.db.entity.ServicesWithChildren
 import com.polidea.rxandroidble3.RxBleClient
@@ -23,18 +21,12 @@ import com.polidea.rxandroidble3.scan.IsConnectable
 import com.polidea.rxandroidble3.scan.ScanFilter
 import com.polidea.rxandroidble3.scan.ScanResult
 import com.polidea.rxandroidble3.scan.ScanSettings
-import io.reactivex.rxjava3.core.Completable
-import io.reactivex.rxjava3.core.Maybe
+import io.reactivex.rxjava3.core.*
 import io.reactivex.rxjava3.core.Observable
-import io.reactivex.rxjava3.core.Scheduler
-import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.disposables.CompositeDisposable
-import io.reactivex.rxjava3.disposables.Disposable
-import io.reactivex.rxjava3.schedulers.Schedulers
 import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -72,7 +64,7 @@ class ScannerImpl @Inject constructor(
 
 
     private fun tagLocation(scanResult: ScanResult): Maybe<DbScanResult> {
-        return Single.just(scanResult).flatMapMaybe { r ->
+        return Single.just(scanResult).flatMapMaybe<DbScanResult?> { r ->
             val criteria = Criteria().apply {
                 accuracy = Criteria.ACCURACY_FINE
                 isCostAllowed = false
@@ -105,18 +97,23 @@ class ScannerImpl @Inject constructor(
                 Maybe.empty()
             }
 
-        }
+        }.doOnSubscribe { Log.v(NAME, "getting location for ${scanResult.bleDevice.macAddress}") }
+            .doOnError { e -> Log.e(NAME, "failed to get location for ${scanResult.bleDevice.macAddress}: $e") }
     }
 
     private fun insertResult(scanResult: ScanResult): Completable {
-        return tagLocation(scanResult).flatMapCompletable { result ->
-            database.insertScanResult(result)
-                .doOnSubscribe { Log.v(NAME, "inserting scan result") }
-                .doOnComplete { Log.v(NAME, "insert complete") }
+        return tagLocation(scanResult)
+            .onErrorReturn {
+                DbScanResult(scanResult)
+            }
+            .flatMapCompletable { result ->
+                database.insertScanResult(result)
+                    .doOnSubscribe { Log.v(NAME, "inserting scan result") }
+                    .doOnComplete { Log.v(NAME, "insert complete") }
 
-                .doOnError { e -> Log.v(NAME, "insert error $e") }
-                .subscribeOn(dbScheduler)
-        }
+                    .doOnError { e -> Log.v(NAME, "insert error $e") }
+                    .subscribeOn(dbScheduler)
+            }
     }
 
     private fun discoverServices(device: RxBleDevice): Completable {
@@ -132,12 +129,12 @@ class ScannerImpl @Inject constructor(
     }
 
     private fun discoverServices(scanResult: ScanResult): Completable {
-       return when(scanResult.isConnectable) {
-           IsConnectable.CONNECTABLE -> discoverServices(scanResult.bleDevice)
-           IsConnectable.NOT_CONNECTABLE -> Completable.complete()
-           IsConnectable.LEGACY_UNKNOWN -> discoverServices(scanResult.bleDevice)
-           else -> Completable.complete()
-       }
+        return when (scanResult.isConnectable) {
+            IsConnectable.CONNECTABLE -> discoverServices(scanResult.bleDevice)
+            IsConnectable.NOT_CONNECTABLE -> Completable.complete()
+            IsConnectable.LEGACY_UNKNOWN -> discoverServices(scanResult.bleDevice)
+            else -> Completable.complete()
+        }
     }
 
 

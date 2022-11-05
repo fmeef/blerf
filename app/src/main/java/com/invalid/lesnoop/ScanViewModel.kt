@@ -17,13 +17,15 @@ import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import me.bytebeats.views.charts.pie.PieChartData
+import java.io.File
 import javax.inject.Inject
-import kotlin.math.abs
+import javax.inject.Named
 
 @HiltViewModel
 class ScanViewModel @Inject constructor(
     val scanResultDao: ScanResultDao,
     val scanBuilder: ScanSubcomponent.Builder,
+    @Named(Module.DB_PATH) val dbPath: File,
     private val ouiParser: OuiParser
 ) : ViewModel() {
     val currentScans = mutableStateListOf<ScanResult>()

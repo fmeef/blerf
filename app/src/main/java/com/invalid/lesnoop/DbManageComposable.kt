@@ -1,18 +1,28 @@
 package com.invalid.lesnoop
 
+import android.net.Uri
+import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rxjava3.subscribeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toFile
+import androidx.hilt.navigation.compose.hiltViewModel
 import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.bytebeats.views.charts.pie.PieChart
 import me.bytebeats.views.charts.pie.PieChartData
 
@@ -20,6 +30,26 @@ import me.bytebeats.views.charts.pie.PieChartData
 @Composable
 fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/x-sqlite3")
+    ){ uri: Uri? ->
+        scope.launch(Dispatchers.IO) {
+            val f = model.dbPath.inputStream()
+            if (uri != null) {
+                val out = context.contentResolver.openOutputStream(uri)
+                if (out != null) {
+                    Log.e("debug", "writing $uri")
+                    f.copyTo(out)
+                    out.close()
+                }
+            } else {
+               withContext(Dispatchers.Main)  {
+                   Toast.makeText(context, "Invalid file path", Toast.LENGTH_LONG).show()
+               }
+            }
+        }
+    }
     Column(
         modifier = Modifier
             .padding(padding)
@@ -29,13 +59,14 @@ fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
-            modifier = Modifier.padding(padding).fillMaxWidth(),
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             ScanResultsCount(model = model)
             Button(onClick = {
-                Toast.makeText(context, "Try again later you export weenie", Toast.LENGTH_LONG)
-                    .show()
+                launcher.launch("output.sqlite")
             }) {
                 Text(text = "Export database")
             }

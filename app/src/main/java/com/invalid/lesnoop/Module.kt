@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.LocationManager
 import android.location.LocationProvider
 import android.location.provider.ProviderProperties
+import androidx.room.Database
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -15,6 +16,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.plugins.RxJavaPlugins
+import java.io.File
+import java.nio.file.Path
 import javax.inject.Named
 import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
@@ -23,6 +26,7 @@ class Module {
 
     companion object {
         const val DB_SCHEDULER = "dbsched"
+        const val DB_PATH = "dbpath"
     }
 
     @Provides
@@ -49,5 +53,12 @@ class Module {
     @Singleton
     fun providesLocationManager(@ApplicationContext ctx: Context): LocationManager {
         return ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    }
+
+    @Provides
+    @Singleton
+    @Named(DB_PATH)
+    fun providesDatabasePath(database: ScanDatabase): File {
+        return File(database.openHelper.readableDatabase.path)
     }
 }
