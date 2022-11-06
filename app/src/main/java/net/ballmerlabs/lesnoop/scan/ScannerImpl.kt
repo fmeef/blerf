@@ -96,14 +96,19 @@ class ScannerImpl @Inject constructor(
 
     private fun discoverServices(device: RxBleDevice): Completable {
         return device.establishConnection(false)
-            .concatMapSingle { connection -> connection.discoverServices() }
-            .flatMap { s -> Observable.fromIterable(s.bluetoothGattServices) }
-            .map { s -> ServicesWithChildren(s) }
-            .flatMapCompletable { services ->
-                database.insertService(services)
+            .subscribeOn(scheduler)
+            .concatMapCompletable { connection ->
+                connection.discoverServices()
+                    .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
+                    .map { s -> ServicesWithChildren(s) }
+                    .flatMapCompletable { services ->
+                        database.insertService(services)
+                    }
+                    .doOnError { err -> Log.e(NAME, "failed to discover services for ${device.macAddress}: $err") }
+                    .doOnComplete { Log.v(NAME, "successfully discovered services for ${device.macAddress}") }
+                    .onErrorComplete()
             }
-            .doOnError { err -> Log.e(NAME, "failed to discover services for $device: $err") }
-            .onErrorComplete()
+
     }
 
     override fun discoverServices(scanResult: ScanResult): Completable {
@@ -148,7 +153,6 @@ class ScannerImpl @Inject constructor(
     }
 
     override fun dispose() {
-        stopScanBackground()
         disp.dispose()
     }
 

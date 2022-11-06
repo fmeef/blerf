@@ -12,6 +12,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.subjects.PublishSubject
+import net.ballmerlabs.lesnoop.scan.Scanner
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
@@ -44,6 +45,7 @@ class ScanSnoopService : Service() {
     }
 
     fun stopScan() {
+        scan.get()?.disp?.stopScanBackground()
         scan.getAndSet(null)?.disp?.dispose()
     }
 
@@ -56,7 +58,7 @@ class ScanSnoopService : Service() {
 
     data class ScanHandle(
         val subject: PublishSubject<ScanResult>,
-        val disp: Disposable
+        val disp: Scanner
     )
 
     inner class SnoopBinder: Binder() {

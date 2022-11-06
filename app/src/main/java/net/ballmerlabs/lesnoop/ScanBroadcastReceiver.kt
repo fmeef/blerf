@@ -53,20 +53,20 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
         try {
             val b = busy.getAndSet(true)
             if (!b) {
-                disp?.dispose()
-                disp = null
                 val result = client.backgroundScanner.onScanResultReceived(intent)
                 val scanner = context.getScan(scanBuilder)
-                val d = Observable.fromIterable(result).flatMapCompletable { r ->
-                    scanner.insertResult(r)
+                val d = Observable.fromIterable(result).concatMapCompletable { r ->
+                    scanner.insertResult(r).andThen(scanner.discoverServices(r))
                 }
                     .doOnSubscribe { d -> disp = d }
                     .doOnDispose {
                         disp = null
+                        scanner.dispose()
                         busy.set(false)
                     }
                     .doFinally {
                         disp = null
+                        scanner.dispose()
                         busy.set(false)
                     }
                     .subscribe(
