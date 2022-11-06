@@ -97,7 +97,7 @@ class ScannerImpl @Inject constructor(
     private fun discoverServices(device: RxBleDevice): Completable {
         return device.establishConnection(false)
             .subscribeOn(scheduler)
-            .concatMapCompletable { connection ->
+            .concatMapSingle { connection ->
                 connection.discoverServices()
                     .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
                     .map { s -> ServicesWithChildren(s) }
@@ -107,7 +107,10 @@ class ScannerImpl @Inject constructor(
                     .doOnError { err -> Log.e(NAME, "failed to discover services for ${device.macAddress}: $err") }
                     .doOnComplete { Log.v(NAME, "successfully discovered services for ${device.macAddress}") }
                     .onErrorComplete()
+                    .toSingleDefault(connection)
             }
+            .firstOrError()
+            .ignoreElement()
 
     }
 
