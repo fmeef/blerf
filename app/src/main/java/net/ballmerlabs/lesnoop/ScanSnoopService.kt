@@ -28,25 +28,24 @@ class ScanSnoopService : Service() {
     @Inject
     lateinit var broadcastReceiver: ScanBroadcastReceiver
 
-    private val scan = AtomicReference<ScanHandle>()
+    private val scan = AtomicReference<Scanner?>(null)
 
-    fun startScanToDb(): Observable<ScanResult> {
+    fun startScanToDb() {
         val scanner = applicationContext.getScan(scanBuilder)
-        val subj = PublishSubject.create<ScanResult>()
-        val handle = ScanHandle(
-            subject = subj,
-            disp = scanner
-        )
-        scan.getAndSet(handle)?.disp?.dispose()
-
+        val old = scan.getAndSet(scanner);
+        old?.stopScanBackground()
+        old?.dispose()
         scanner.scanBackground()
-
-        return handle.subject
     }
 
     fun stopScan() {
-        scan.get()?.disp?.stopScanBackground()
-        scan.getAndSet(null)?.disp?.dispose()
+        val s = scan.getAndSet(null)
+        if (s != null) {
+            s.stopScanBackground()
+            s.dispose()
+        } else {
+            applicationContext.getScan(scanBuilder).stopScanBackground()
+        }
     }
 
     private val binder = SnoopBinder()
@@ -56,10 +55,15 @@ class ScanSnoopService : Service() {
         return binder
     }
 
-    data class ScanHandle(
-        val subject: PublishSubject<ScanResult>,
-        val disp: Scanner
-    )
+    override fun onDestroy() {
+        super.onDestroy()
+        stopScan()
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        stopScan()
+    }
 
     inner class SnoopBinder: Binder() {
         fun getService(): ScanSnoopService = this@ScanSnoopService

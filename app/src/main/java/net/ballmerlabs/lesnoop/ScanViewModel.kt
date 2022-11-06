@@ -13,6 +13,7 @@ import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.BackpressureStrategy
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -26,7 +27,8 @@ class ScanViewModel @Inject constructor(
     val scanResultDao: ScanResultDao,
     val scanBuilder: ScanSubcomponent.Builder,
     @Named(Module.DB_PATH) val dbPath: File,
-    private val ouiParser: OuiParser
+    private val ouiParser: OuiParser,
+    @Named(Module.DB_SCHEDULER) private val dbScheduler: Scheduler
 ) : ViewModel() {
     val currentScans = mutableStateListOf<ScanResult>()
     val topText = mutableStateOf("Nearby devices")
@@ -46,7 +48,7 @@ class ScanViewModel @Inject constructor(
 
     private fun getTopOuis(size: Int): Single<Map<String, Int>> {
         return scanResultDao.getScanResults()
-            .subscribeOn(Schedulers.io())
+            .subscribeOn(dbScheduler)
             .flatMapObservable { r -> Observable.fromIterable(r) }
             .flatMapSingle { r -> ouiParser.ouiForDevice(r.macAddress) }
             .reduce(HashMap<String, Int>()) { set, r ->

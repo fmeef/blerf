@@ -179,7 +179,7 @@ fun ScanDialog(s: () -> ScanSnoopService) {
             Column() {
                 Text(text = "ScanDialog")
                 Row() {
-                    Button(onClick = { service.startScanToDb().subscribe() }) {
+                    Button(onClick = { service.startScanToDb() }) {
                         Text(text = "Start scan")
                     }
                     Button(onClick = { service.stopScan() }) {

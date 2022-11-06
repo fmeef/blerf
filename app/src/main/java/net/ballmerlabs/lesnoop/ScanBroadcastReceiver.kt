@@ -55,7 +55,7 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
             if (!b) {
                 val result = client.backgroundScanner.onScanResultReceived(intent)
                 val scanner = context.getScan(scanBuilder)
-                val d = Observable.fromIterable(result).concatMapCompletable { r ->
+                Observable.fromIterable(result).concatMapCompletable { r ->
                     scanner.insertResult(r).andThen(scanner.discoverServices(r))
                 }
                     .doOnSubscribe { d -> disp = d }
@@ -73,8 +73,6 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
                     { Log.v("debug", "inserted background scan") },
                     { err -> Log.e("debug", "failed to insert background scan $err")}
                 )
-
-                disp = d
 
                 Log.v("debug", "background scan result $result")
             }
