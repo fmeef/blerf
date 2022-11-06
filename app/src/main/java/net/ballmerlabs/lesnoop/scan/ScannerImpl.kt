@@ -13,13 +13,12 @@ import com.polidea.rxandroidble3.scan.ScanSettings
 import io.reactivex.rxjava3.core.*
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
-import net.ballmerlabs.lesnoop.Module
-import net.ballmerlabs.lesnoop.ScanBroadcastReceiver
-import net.ballmerlabs.lesnoop.ScanScope
-import net.ballmerlabs.lesnoop.ScanSubcomponent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import net.ballmerlabs.lesnoop.*
 import net.ballmerlabs.lesnoop.db.ScanResultDao
 import net.ballmerlabs.lesnoop.db.entity.DbScanResult
 import net.ballmerlabs.lesnoop.db.entity.ServicesWithChildren
+import java.sql.Time
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -50,13 +49,27 @@ class ScannerImpl @Inject constructor(
     private val database: ScanResultDao,
     @Named(Module.DB_SCHEDULER)
     private val dbScheduler: Scheduler,
-    context: Context,
-    private val locationTagger: LocationTagger
+    private val context: Context,
+    private val locationTagger: LocationTagger,
 ) : Scanner {
     private val disp = CompositeDisposable()
 
     private val pendingIntent: PendingIntent = ScanBroadcastReceiver.newPendingIntent(context)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun updatePrefScan(isScanning: Boolean) {
+        context.rxPrefs.updateDataAsync() { prefs ->
+            val p = prefs.toMutablePreferences()
+            p[PREF_BACKGROUND_SCAN] =  isScanning
+            Single.just(p)
+        }.subscribeOn(dbScheduler)
+            .timeout(1, TimeUnit.SECONDS)
+            .ignoreElement()
+            .subscribe(
+                { Log.v(NAME, "updated prefs") },
+                { err -> Log.e(NAME, "failed to update prefs $err") }
+            )
+    }
 
     override fun scanBackground() {
         val settings = ScanSettings.Builder()
@@ -66,10 +79,12 @@ class ScannerImpl @Inject constructor(
             .build()
         val filter = ScanFilter.Builder().build()
         client.backgroundScanner.scanBleDeviceInBackground(pendingIntent, settings, filter)
+        updatePrefScan(true)
     }
 
     override fun stopScanBackground() {
         client.backgroundScanner.stopBackgroundBleScan(pendingIntent)
+        updatePrefScan(false)
     }
 
     override fun insertResult(scanResult: ScanResult): Completable {
@@ -97,8 +112,18 @@ class ScannerImpl @Inject constructor(
                     .flatMapCompletable { services ->
                         database.insertService(services)
                     }
-                    .doOnError { err -> Log.e(NAME, "failed to discover services for ${device.macAddress}: $err") }
-                    .doOnComplete { Log.v(NAME, "successfully discovered services for ${device.macAddress}") }
+                    .doOnError { err ->
+                        Log.e(
+                            NAME,
+                            "failed to discover services for ${device.macAddress}: $err"
+                        )
+                    }
+                    .doOnComplete {
+                        Log.v(
+                            NAME,
+                            "successfully discovered services for ${device.macAddress}"
+                        )
+                    }
                     .onErrorComplete()
                     .toSingleDefault(connection)
             }

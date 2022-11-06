@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.runBlocking
 import net.ballmerlabs.lesnoop.db.ScanResultDao
 import net.ballmerlabs.lesnoop.scan.Scanner
 import java.util.concurrent.atomic.AtomicReference
@@ -51,12 +52,12 @@ class ScanSnoopService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopScan()
+        runBlocking { stopScan() }
     }
 
     override fun onCreate() {
         super.onCreate()
-        stopScan()
+        runBlocking { stopScan() }
     }
 
     inner class SnoopBinder: Binder() {

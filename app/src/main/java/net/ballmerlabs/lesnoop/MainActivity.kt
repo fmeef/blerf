@@ -16,11 +16,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rxjava3.subscribeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.rxjava3.rxPreferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -32,11 +37,18 @@ import com.google.accompanist.permissions.rememberPermissionState
 import net.ballmerlabs.lesnoop.db.OuiParser
 import net.ballmerlabs.lesnoop.ui.theme.BlerfTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 const val NAV_SCAN = "scan"
 const val NAV_DB = "database"
 const val NAV_DIALOG = "dialog"
+const val PREF_NAME = "scanprefs"
+
+val Context.rxPrefs by rxPreferencesDataStore(PREF_NAME)
+
+val PREF_BACKGROUND_SCAN = booleanPreferencesKey("background_scan")
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -161,11 +173,16 @@ fun ScopePermissions(
 }
 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 @ExperimentalPermissionsApi
 fun ScanDialog(s: () -> ScanSnoopService) {
 
     val service by remember { derivedStateOf(s) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
 
     ScopePermissions {
         Surface(
@@ -179,10 +196,16 @@ fun ScanDialog(s: () -> ScanSnoopService) {
             Column {
                 Text(text = "ScanDialog")
                 Row {
-                    Button(onClick = { service.startScanToDb() }) {
+                    Button(
+                        onClick = { service.startScanToDb() },
+                        enabled = !p.value
+                    ) {
                         Text(text = "Start scan")
                     }
-                    Button(onClick = { service.stopScan() }) {
+                    Button(
+                        onClick = { service.stopScan() },
+                        enabled = p.value
+                    ) {
                         Text(text = "Stop scan")
                     }
                 }
