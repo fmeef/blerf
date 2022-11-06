@@ -30,7 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
 import net.ballmerlabs.lesnoop.db.OuiParser
-import net.ballmerlabs.lesnoop.ui.theme.LeSnoopTheme
+import net.ballmerlabs.lesnoop.ui.theme.BlerfTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            LeSnoopTheme {
+            BlerfTheme {
                 Body {
                     service
                 }
