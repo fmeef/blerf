@@ -1,9 +1,6 @@
 package net.ballmerlabs.lesnoop
 
 import android.content.Context
-import net.ballmerlabs.lesnoop.scan.Scanner
-import net.ballmerlabs.lesnoop.scan.ScannerImpl
-import com.polidea.rxandroidble3.RxBleClient
 import dagger.Binds
 import dagger.BindsInstance
 import dagger.Provides
@@ -13,7 +10,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.plugins.RxJavaPlugins
-import java.util.concurrent.Executor
+import net.ballmerlabs.lesnoop.scan.Scanner
+import net.ballmerlabs.lesnoop.scan.ScannerImpl
 import javax.inject.Named
 
 fun Context.getScan(scanBuilder: ScanSubcomponent.Builder): Scanner {

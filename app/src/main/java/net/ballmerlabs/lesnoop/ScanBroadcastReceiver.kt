@@ -8,12 +8,10 @@ import android.os.Build
 import android.util.Log
 import com.polidea.rxandroidble3.RxBleClient
 import dagger.hilt.android.AndroidEntryPoint
-import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import net.ballmerlabs.lesnoop.scan.BroadcastReceiverState
 import net.ballmerlabs.lesnoop.scan.LocationTagger
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 private const val SCAN_REQUEST_CODE = 44

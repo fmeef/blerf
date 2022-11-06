@@ -1,20 +1,8 @@
 package net.ballmerlabs.lesnoop.scan
 
-import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
-import android.content.pm.PackageManager
-import android.location.Criteria
-import android.location.LocationManager
-import android.os.Build
 import android.util.Log
-import androidx.core.app.ActivityCompat
-import net.ballmerlabs.lesnoop.Module
-import net.ballmerlabs.lesnoop.ScanScope
-import net.ballmerlabs.lesnoop.ScanSubcomponent
-import net.ballmerlabs.lesnoop.db.ScanResultDao
-import net.ballmerlabs.lesnoop.db.entity.DbScanResult
-import net.ballmerlabs.lesnoop.db.entity.ServicesWithChildren
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.RxBleDevice
 import com.polidea.rxandroidble3.exceptions.BleScanException
@@ -25,9 +13,14 @@ import com.polidea.rxandroidble3.scan.ScanSettings
 import io.reactivex.rxjava3.core.*
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
+import net.ballmerlabs.lesnoop.Module
 import net.ballmerlabs.lesnoop.ScanBroadcastReceiver
+import net.ballmerlabs.lesnoop.ScanScope
+import net.ballmerlabs.lesnoop.ScanSubcomponent
+import net.ballmerlabs.lesnoop.db.ScanResultDao
+import net.ballmerlabs.lesnoop.db.entity.DbScanResult
+import net.ballmerlabs.lesnoop.db.entity.ServicesWithChildren
 import java.util.*
-import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Named

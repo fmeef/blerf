@@ -176,9 +176,9 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                 )
                 .padding(8.dp)
         ) {
-            Column() {
+            Column {
                 Text(text = "ScanDialog")
-                Row() {
+                Row {
                     Button(onClick = { service.startScanToDb() }) {
                         Text(text = "Start scan")
                     }
@@ -194,8 +194,7 @@ fun ScanDialog(s: () -> ScanSnoopService) {
 
 @Composable
 fun BottomBar(navController: NavController) {
-    BottomAppBar(
-    ) {
+    BottomAppBar {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
