@@ -11,8 +11,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
+import net.ballmerlabs.lesnoop.scan.BroadcastReceiverState
 import net.ballmerlabs.lesnoop.scan.LocationTagger
-import net.ballmerlabs.lesnoop.scan.Scanner
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
@@ -28,8 +28,10 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
 
     @Inject
     lateinit var scanBuilder: ScanSubcomponent.Builder
-
-    private val busy = AtomicBoolean()
+    
+    @Inject
+    lateinit var state: BroadcastReceiverState
+    
     private var disp: Disposable? = null
 
     companion object {
@@ -51,7 +53,7 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         try {
-            val b = busy.getAndSet(true)
+            val b = state.busy.getAndSet(true)
             if (!b) {
                 val result = client.backgroundScanner.onScanResultReceived(intent)
                 val scanner = context.getScan(scanBuilder)
@@ -62,12 +64,12 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
                     .doOnDispose {
                         disp = null
                         scanner.dispose()
-                        busy.set(false)
+                        state.busy.set(false)
                     }
                     .doFinally {
                         disp = null
                         scanner.dispose()
-                        busy.set(false)
+                        state.busy.set(false)
                     }
                     .subscribe(
                     { Log.v("debug", "inserted background scan") },
