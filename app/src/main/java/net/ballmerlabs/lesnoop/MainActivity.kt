@@ -120,7 +120,7 @@ fun TopBar() {
                             d.dispose()
                         }
                     ) {
-                        Text(text = "Stop scan")
+                        Text(text = stringResource(id = R.string.stop_scan))
                     }
                 }
             }
@@ -167,7 +167,7 @@ fun ScopePermissions(
             Button(
                 onClick = { p.launchPermissionRequest() }
             ) {
-                Text(text = "Permission ${p.permission} not granted")
+                Text(text = stringResource(id = R.string.not_granted, p.permission))
             }
         }
     }
@@ -180,7 +180,6 @@ fun ScopePermissions(
 fun ScanDialog(s: () -> ScanSnoopService) {
 
     val service by remember { derivedStateOf(s) }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
@@ -195,20 +194,23 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                 .padding(8.dp)
         ) {
             Column {
-                Text(text = "Background scan", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = stringResource(id = R.string.background_scan),
+                    style = MaterialTheme.typography.headlineSmall
+                )
                 Text(text = stringResource(id = R.string.scan_disclaimer))
                 Row {
                     Button(
                         onClick = { service.startScanToDb() },
                         enabled = !p.value
                     ) {
-                        Text(text = "Start scan")
+                        Text(text = stringResource(id = R.string.start_scan))
                     }
                     Button(
                         onClick = { service.stopScan() },
                         enabled = p.value
                     ) {
-                        Text(text = "Stop scan")
+                        Text(text = stringResource(id = R.string.stop_scan))
                     }
                 }
             }
@@ -229,13 +231,13 @@ fun BottomBar(navController: NavController) {
                     modifier = Modifier.padding(start = 5.dp, end = 5.dp),
                     onClick = { navController.navigate(NAV_SCAN) }
                 ) {
-                    Text(text = "Scan")
+                    Text(text = stringResource(id = R.string.scan))
                 }
                 Button(
                     modifier = Modifier.padding(start = 5.dp, end = 5.dp),
                     onClick = { navController.navigate(NAV_DB) }
                 ) {
-                    Text(text = "Database")
+                    Text(text = stringResource(id = R.string.database))
                 }
 
             }
@@ -244,7 +246,7 @@ fun BottomBar(navController: NavController) {
             ) {
                 Icon(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_baseline_perm_scan_wifi_24),
-                    "Toggle"
+                    stringResource(id = R.string.toggle)
                 )
             }
         }
@@ -262,13 +264,13 @@ fun Body(service: () -> ScanSnoopService) {
         content = { padding ->
             NavHost(navController = navController, startDestination = NAV_SCAN) {
                 composable(NAV_SCAN) {
-                    model.topText.value = "Nearby devices"
+                    model.topText.value = stringResource(id = R.string.nearby)
                     ScopePermissions(modifier = Modifier.fillMaxSize()) {
                         DeviceList(padding, model)
                     }
                 }
                 composable(NAV_DB) {
-                    model.topText.value = "Database"
+                    model.topText.value = stringResource(id = R.string.database)
                     EmptyTest(padding, model)
                 }
                 dialog(NAV_DIALOG) { ScanDialog(service) }

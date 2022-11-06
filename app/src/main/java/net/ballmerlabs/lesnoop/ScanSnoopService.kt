@@ -4,8 +4,8 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.runBlocking
 import net.ballmerlabs.lesnoop.db.ScanResultDao
 import net.ballmerlabs.lesnoop.scan.Scanner
 import java.util.concurrent.atomic.AtomicReference
@@ -26,20 +26,28 @@ class ScanSnoopService : Service() {
     private val scan = AtomicReference<Scanner?>(null)
 
     fun startScanToDb() {
-        val scanner = applicationContext.getScan(scanBuilder)
-        val old = scan.getAndSet(scanner)
-        old?.stopScanBackground()
-        old?.dispose()
-        scanner.scanBackground()
+        try {
+            val scanner = applicationContext.getScan(scanBuilder)
+            val old = scan.getAndSet(scanner)
+            old?.stopScanBackground()
+            old?.dispose()
+            scanner.scanBackground()
+        } catch (exc: Exception) {
+            Log.e("debug", "failed to start scan $exc")
+        }
     }
 
     fun stopScan() {
-        val s = scan.getAndSet(null)
-        if (s != null) {
-            s.stopScanBackground()
-            s.dispose()
-        } else {
-            applicationContext.getScan(scanBuilder).stopScanBackground()
+        try {
+            val s = scan.getAndSet(null)
+            if (s != null) {
+                s.stopScanBackground()
+                s.dispose()
+            } else {
+                applicationContext.getScan(scanBuilder).stopScanBackground()
+            }
+        } catch (exc: Exception) {
+            Log.e("debug", "failed to stop scan $exc")
         }
     }
 
@@ -52,15 +60,15 @@ class ScanSnoopService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        runBlocking { stopScan() }
+        stopScan()
     }
 
     override fun onCreate() {
         super.onCreate()
-        runBlocking { stopScan() }
+        stopScan()
     }
 
-    inner class SnoopBinder: Binder() {
+    inner class SnoopBinder : Binder() {
         fun getService(): ScanSnoopService = this@ScanSnoopService
     }
 }

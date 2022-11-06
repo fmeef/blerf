@@ -83,7 +83,6 @@ fun DeviceList(padding: PaddingValues, model: ScanViewModel) {
 
 @Composable
 fun ScanResultView(scanResult: ScanResult) {
-    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxSize()

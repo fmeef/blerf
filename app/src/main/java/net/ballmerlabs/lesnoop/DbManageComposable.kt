@@ -16,6 +16,7 @@ import androidx.compose.runtime.rxjava3.subscribeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +44,7 @@ fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
                 }
             } else {
                withContext(Dispatchers.Main)  {
-                   Toast.makeText(context, "Invalid file path", Toast.LENGTH_LONG).show()
+                   Toast.makeText(context, context.getText(R.string.invalid_file_path), Toast.LENGTH_LONG).show()
                }
             }
         }
@@ -66,7 +67,7 @@ fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
             Button(onClick = {
                 launcher.launch("output.sqlite")
             }) {
-                Text(text = "Export database")
+                Text(text = stringResource(id = R.string.export))
             }
         }
         Legend(modifier = Modifier.fillMaxWidth(), model = model)
@@ -79,7 +80,7 @@ fun ScanResultsCount(model: ScanViewModel, modifier: Modifier = Modifier) {
     val count = model.scanResultDao.scanResultCount()
         .subscribeOn(Schedulers.io())
         .subscribeAsState(initial = 0)
-    Text(modifier = modifier, text = "Currently indexed ${count.value} devices")
+    Text(modifier = modifier, text = stringResource(id = R.string.indexed, count.value))
 }
 
 @Composable
