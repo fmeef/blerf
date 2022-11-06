@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace 'com.invalid.lesnoop'
+    namespace 'net.ballmerlabs.lesnoop'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.invalid.lesnoop"
+        applicationId "net.ballmerlabs.lesnoop"
         minSdk 26
         targetSdk 33
         versionCode 1
