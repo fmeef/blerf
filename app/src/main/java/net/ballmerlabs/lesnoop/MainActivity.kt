@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -194,7 +195,8 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                 .padding(8.dp)
         ) {
             Column {
-                Text(text = "ScanDialog")
+                Text(text = "Background scan", style = MaterialTheme.typography.headlineSmall)
+                Text(text = stringResource(id = R.string.scan_disclaimer))
                 Row {
                     Button(
                         onClick = { service.startScanToDb() },
