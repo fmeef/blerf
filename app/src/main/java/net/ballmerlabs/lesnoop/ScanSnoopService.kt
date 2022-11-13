@@ -46,6 +46,7 @@ class ScanSnoopService : Service() {
             } else {
                 applicationContext.getScan(scanBuilder).stopScanBackground()
             }
+            unregisterReceiver(broadcastReceiver)
         } catch (exc: Exception) {
             Log.e("debug", "failed to stop scan $exc")
         }

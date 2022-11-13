@@ -84,6 +84,7 @@ class ScannerImpl @Inject constructor(
 
     override fun stopScanBackground() {
         client.backgroundScanner.stopBackgroundBleScan(pendingIntent)
+        //ontext.unregisterReceiver(reciever)
         updatePrefScan(false)
     }
 
