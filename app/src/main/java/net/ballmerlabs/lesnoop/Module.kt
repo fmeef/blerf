@@ -13,6 +13,7 @@ import dagger.hilt.components.SingletonComponent
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.plugins.RxJavaPlugins
 import net.ballmerlabs.lesnoop.db.MIGATION_2_3
+import net.ballmerlabs.lesnoop.scan.Scanner
 import java.io.File
 import java.util.concurrent.Executor
 import javax.inject.Named
@@ -25,18 +26,20 @@ class Module {
         const val DB_SCHEDULER = "dbsched"
         const val DB_PATH = "dbpath"
         const val EXECUTOR_COMPUTE = "computeexec"
+        const val GLOBAL_SCAN = "globalscan"
     }
 
     @Provides
     @Singleton
     @Named(DB_SCHEDULER)
     fun provideDbSceduler(): Scheduler {
-        return RxJavaPlugins.createIoScheduler { r ->
+        return RxJavaPlugins.createSingleScheduler { r ->
             Thread(r)
         }
     }
 
     @Provides
+    @Singleton
     fun providesDao(database: ScanDatabase): ScanResultDao {
         return database.scanResultsDao()
     }
@@ -60,6 +63,13 @@ class Module {
     @Singleton
     fun providesLocationManager(@ApplicationContext ctx: Context): LocationManager {
         return ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    }
+
+    @Provides
+    @Singleton
+    @Named(GLOBAL_SCAN)
+    fun providesGlobalScanner(@ApplicationContext context: Context, b: ScanSubcomponent.Builder): Scanner {
+        return context.getScan(b)
     }
 
     @Provides

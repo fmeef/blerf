@@ -12,7 +12,9 @@ import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import net.ballmerlabs.lesnoop.scan.BroadcastReceiverState
 import net.ballmerlabs.lesnoop.scan.LocationTagger
+import net.ballmerlabs.lesnoop.scan.Scanner
 import javax.inject.Inject
+import javax.inject.Named
 
 private const val SCAN_REQUEST_CODE = 44
 
@@ -29,6 +31,10 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
     
     @Inject
     lateinit var state: BroadcastReceiverState
+
+    @Inject
+    @Named(Module.GLOBAL_SCAN)
+    lateinit var scanner: Scanner
     
     private var disp: Disposable? = null
 
@@ -54,9 +60,10 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
             val b = state.busy.getAndSet(true)
             if (!b) {
                 val result = client.backgroundScanner.onScanResultReceived(intent)
-                val scanner = context.getScan(scanBuilder)
                 Observable.fromIterable(result).concatMapCompletable { r ->
-                    scanner.insertResult(r).andThen(scanner.discoverServices(r))
+                    scanner.insertResult(r).flatMapCompletable { scanResult ->
+                        scanner.discoverServices(r, scanResult)
+                    }
                 }
                     .doOnSubscribe { d -> disp = d }
                     .doOnDispose {

@@ -58,16 +58,6 @@ class ScanSnoopService : Service() {
         return binder
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        stopScan()
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        stopScan()
-    }
-
     inner class SnoopBinder : Binder() {
         fun getService(): ScanSnoopService = this@ScanSnoopService
     }

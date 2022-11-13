@@ -25,56 +25,40 @@ interface ScanResultDao {
     fun getScanResults(): Single<List<DbScanResult>>
 
     @Insert
-    fun insertScanResult(scanResult: DbScanResult): Completable
+    fun insertScanResult(scanResult: DbScanResult): Single<Long>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insertCharacteristic(characteristic: Characteristic): Single<Long>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertCharacteristic(characteristic: Characteristic): Long
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insertDescriptors(descriptors: List<Descriptor>): Completable
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertDescriptors(descriptors: List<Descriptor>)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insertDiscoveredService(service: DiscoveredService): Single<Long>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertDiscoveredService(service: DiscoveredService)
 
     @Insert
-    fun insertMapping(mapping: ServiceScanResultMapping): Completable
+    fun insertMapping(mapping: ServiceScanResultMapping)
 
 
-    fun insertCharacteristic(characteristic: CharacteristicWithDescriptors): Completable {
-        return Single.just(characteristic).flatMap { c ->
-            insertCharacteristic(c.characteristic)
-        }.map { l ->
-            val descriptors = characteristic.descriptors
+
+    @Transaction
+    fun insertService(service: ServicesWithChildren, scanResult: Long? = null) {
+        insertDiscoveredService(service.discoveredService)
+        val chars = service.characteristics
+        for (char in chars) {
+            char.characteristic.parentService = service.discoveredService.uid
+            val l = insertCharacteristic(char.characteristic)
+            val descriptors = char.descriptors
             descriptors.forEach { d -> d.parentCharacteristic = l }
-            descriptors
-        }.flatMapCompletable { d -> insertDescriptors(d) }
-    }
-
-    fun insertService(service: ServicesWithChildren, scanResult: Long? = null): Completable {
-        return Single.just(service)
-            .flatMap { s -> insertDiscoveredService(s.discoveredService) }
-            .flatMapObservable { l ->
-                val chars = service.characteristics
-                chars.forEach { c ->
-                    c.characteristic.parentService = service.discoveredService.uid
-                }
-                Observable.fromIterable(chars)
+            insertDescriptors(descriptors)
+            if (scanResult != null) {
+                insertMapping(
+                    ServiceScanResultMapping(
+                        service = service.discoveredService.uid,
+                        scanResult = scanResult
+                    )
+                )
             }
-            .flatMapCompletable { c ->
-                insertCharacteristic(c).andThen {
-                    if (scanResult != null) {
-                        insertMapping(
-                            ServiceScanResultMapping(
-                                service = c.characteristic.parentService!!,
-                                scanResult = scanResult
-                            )
-
-                        )
-                    } else {
-                    Completable.complete()
-                    }
-                }
-            }
-
+        }
     }
 }

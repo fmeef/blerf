@@ -102,7 +102,7 @@ class UuidTypeConverter {
         DbLocation::class,
         ServiceScanResultMapping::class
                ],
-    version = 4,
+    version = 5,
     autoMigrations = [
         AutoMigration(from = 1, to = 2)
     ]

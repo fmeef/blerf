@@ -87,36 +87,43 @@ class ScannerImpl @Inject constructor(
         updatePrefScan(false)
     }
 
-    override fun insertResult(scanResult: ScanResult): Completable {
+    override fun insertResult(scanResult: ScanResult): Single<Long> {
         return locationTagger.tagLocation(scanResult)
             .onErrorReturn {
                 DbScanResult(scanResult)
             }
-            .flatMapCompletable { result ->
+            .defaultIfEmpty(DbScanResult(scanResult = scanResult))
+            .flatMap { result ->
                 database.insertScanResult(result)
                     .doOnSubscribe { Log.v(NAME, "inserting scan result") }
-                    .doOnComplete { Log.v(NAME, "insert complete") }
+                    .doOnSuccess { Log.v(NAME, "insert complete") }
 
                     .doOnError { e -> Log.v(NAME, "insert error $e") }
                     .subscribeOn(dbScheduler)
+
             }
     }
 
-    private fun discoverServices(device: RxBleDevice): Completable {
+    private fun discoverServices(device: RxBleDevice, dbid: Long? = null): Completable {
         return device.establishConnection(false)
+            .timeout(10, TimeUnit.SECONDS)
             .subscribeOn(scheduler)
             .concatMapSingle { connection ->
                 connection.discoverServices()
                     .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
                     .map { s -> ServicesWithChildren(s) }
                     .flatMapCompletable { services ->
-                        database.insertService(services)
+                        Completable.fromAction {
+                            database.insertService(services, scanResult = dbid)
+                        }
+                            .subscribeOn(dbScheduler)
                     }
                     .doOnError { err ->
                         Log.e(
                             NAME,
                             "failed to discover services for ${device.macAddress}: $err"
                         )
+                        err.printStackTrace()
                     }
                     .doOnComplete {
                         Log.v(
@@ -132,7 +139,7 @@ class ScannerImpl @Inject constructor(
 
     }
 
-    override fun discoverServices(scanResult: ScanResult): Completable {
+    override fun discoverServices(scanResult: ScanResult, dbid: Long?): Completable {
         return when (scanResult.isConnectable) {
             IsConnectable.CONNECTABLE -> discoverServices(scanResult.bleDevice)
             IsConnectable.NOT_CONNECTABLE -> Completable.complete()
@@ -163,7 +170,7 @@ class ScannerImpl @Inject constructor(
     override fun startScan(): Observable<ScanResult> {
         return scanInternal()
             .flatMapSingle { r ->
-                insertResult(r).toSingleDefault(r)
+                insertResult(r).ignoreElement().toSingleDefault(r)
             }
 
     }
