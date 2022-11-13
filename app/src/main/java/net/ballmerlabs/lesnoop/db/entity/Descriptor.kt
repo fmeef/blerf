@@ -3,6 +3,7 @@ package net.ballmerlabs.lesnoop.db.entity
 import android.bluetooth.BluetoothGattDescriptor
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
@@ -12,6 +13,14 @@ import java.util.UUID
     tableName = "descriptors",
     indices = [
         Index(value = ["parentCharacteristic", "uuid"], unique = true)
+    ],
+    foreignKeys = [
+        ForeignKey(
+            childColumns = [ "parentCharacteristic"],
+            parentColumns = ["uid"],
+            entity = Characteristic::class,
+            onDelete = ForeignKey.CASCADE
+        )
     ]
 )
 data class Descriptor(

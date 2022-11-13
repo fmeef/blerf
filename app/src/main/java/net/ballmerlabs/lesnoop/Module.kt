@@ -52,6 +52,7 @@ class Module {
     fun providesDatabase(@ApplicationContext ctx: Context): ScanDatabase {
         return Room.databaseBuilder(ctx, ScanDatabase::class.java, "ScanDatabase")
             .addMigrations(MIGATION_2_3)
+            .fallbackToDestructiveMigration()
             .build()
     }
 

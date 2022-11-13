@@ -99,9 +99,10 @@ class UuidTypeConverter {
         Characteristic::class,
         DiscoveredService::class,
         Descriptor::class,
-        DbLocation::class
+        DbLocation::class,
+        ServiceScanResultMapping::class
                ],
-    version = 3,
+    version = 4,
     autoMigrations = [
         AutoMigration(from = 1, to = 2)
     ]

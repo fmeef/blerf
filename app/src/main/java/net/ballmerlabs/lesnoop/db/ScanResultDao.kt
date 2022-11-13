@@ -36,6 +36,10 @@ interface ScanResultDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertDiscoveredService(service: DiscoveredService): Single<Long>
 
+    @Insert
+    fun insertMapping(mapping: ServiceScanResultMapping): Completable
+
+
     fun insertCharacteristic(characteristic: CharacteristicWithDescriptors): Completable {
         return Single.just(characteristic).flatMap { c ->
             insertCharacteristic(c.characteristic)
@@ -46,17 +50,31 @@ interface ScanResultDao {
         }.flatMapCompletable { d -> insertDescriptors(d) }
     }
 
-    fun insertService(service: ServicesWithChildren): Completable {
+    fun insertService(service: ServicesWithChildren, scanResult: Long? = null): Completable {
         return Single.just(service)
             .flatMap { s -> insertDiscoveredService(s.discoveredService) }
             .flatMapObservable { l ->
                 val chars = service.characteristics
                 chars.forEach { c ->
-                    c.characteristic.parentService = l
+                    c.characteristic.parentService = service.discoveredService.uid
                 }
                 Observable.fromIterable(chars)
             }
-            .flatMapCompletable { c -> insertCharacteristic(c) }
+            .flatMapCompletable { c ->
+                insertCharacteristic(c).andThen {
+                    if (scanResult != null) {
+                        insertMapping(
+                            ServiceScanResultMapping(
+                                service = c.characteristic.parentService!!,
+                                scanResult = scanResult
+                            )
+
+                        )
+                    } else {
+                    Completable.complete()
+                    }
+                }
+            }
 
     }
 }
