@@ -11,6 +11,7 @@ android {
 
     defaultConfig {
         applicationId "net.ballmerlabs.lesnoop"
+
         minSdk 26
         targetSdk 33
         versionCode 1
@@ -22,8 +23,7 @@ android {
         }
         javaCompileOptions {
             annotationProcessorOptions {
-                arguments += ["room.schemaLocation":
-                                      "$projectDir/schemas".toString()]
+                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
                 }
             }
     }

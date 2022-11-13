@@ -46,8 +46,9 @@ class ScanViewModel @Inject constructor(
             .subscribeOn(dbScheduler)
             .flatMapObservable { r -> Observable.fromIterable(r) }
             .flatMapSingle { r -> ouiParser.ouiForDevice(r.macAddress) }
+            .filter { r -> r != "N/A" }
             .reduce(HashMap<String, Int>()) { set, r ->
-                set.compute(r) { _, i ->
+                set.compute(r) { s, i ->
                     if (i == null) {
                         0
                     } else {
@@ -63,7 +64,7 @@ class ScanViewModel @Inject constructor(
                 } else {
                     s
                 }
-                m.toList().sortedBy { (_, v) -> v }.dropLast(drop).toMap()
+                m.toList().sortedByDescending { (_, v) -> v }.dropLast(drop).toMap()
             }
     }
 
@@ -83,9 +84,9 @@ class ScanViewModel @Inject constructor(
                 Observable.fromIterable(sv.entries)
                     .toFlowable(BackpressureStrategy.BUFFER)
                     .zipWith(colors) { s, color ->
-                        Log.v("debug", "slice $color ${s.key}")
+                        Log.v("debug", "slice $color ${s.key}, ${s.value}")
                         PieChartData.Slice(
-                             s.value.toFloat() / sum.toFloat(),
+                             s.value.toFloat(),
                             color
                         )
                     }
