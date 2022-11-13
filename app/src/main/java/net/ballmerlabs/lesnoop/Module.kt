@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.plugins.RxJavaPlugins
+import net.ballmerlabs.lesnoop.db.MIGATION_2_3
 import java.io.File
 import java.util.concurrent.Executor
 import javax.inject.Named
@@ -49,7 +50,9 @@ class Module {
     @Provides
     @Singleton
     fun providesDatabase(@ApplicationContext ctx: Context): ScanDatabase {
-        return Room.databaseBuilder(ctx, ScanDatabase::class.java, "ScanDatabase").build()
+        return Room.databaseBuilder(ctx, ScanDatabase::class.java, "ScanDatabase")
+            .addMigrations(MIGATION_2_3)
+            .build()
     }
 
     @Provides
