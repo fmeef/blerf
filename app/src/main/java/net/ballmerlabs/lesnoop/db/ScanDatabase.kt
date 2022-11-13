@@ -3,6 +3,7 @@ package net.ballmerlabs.lesnoop.db
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.*
+import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import net.ballmerlabs.lesnoop.db.entity.*
@@ -102,12 +103,16 @@ class UuidTypeConverter {
         DbLocation::class,
         ServiceScanResultMapping::class
                ],
-    version = 5,
+    version = 6,
     autoMigrations = [
-        AutoMigration(from = 1, to = 2)
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 5, to = 6, spec = ScanDatabase.AutoMigrationMappingRename::class)
     ]
 )
 @TypeConverters(UuidTypeConverter::class)
 abstract class ScanDatabase: RoomDatabase() {
     abstract fun scanResultsDao(): ScanResultDao
+
+    @RenameTable(fromTableName = "ServiceScanResultMapping", toTableName = "scan_service_mapping")
+    class AutoMigrationMappingRename(): AutoMigrationSpec
 }
