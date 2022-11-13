@@ -141,9 +141,9 @@ class ScannerImpl @Inject constructor(
 
     override fun discoverServices(scanResult: ScanResult, dbid: Long?): Completable {
         return when (scanResult.isConnectable) {
-            IsConnectable.CONNECTABLE -> discoverServices(scanResult.bleDevice)
+            IsConnectable.CONNECTABLE -> discoverServices(scanResult.bleDevice, dbid)
             IsConnectable.NOT_CONNECTABLE -> Completable.complete()
-            IsConnectable.LEGACY_UNKNOWN -> discoverServices(scanResult.bleDevice)
+            IsConnectable.LEGACY_UNKNOWN -> discoverServices(scanResult.bleDevice, dbid)
             else -> Completable.complete()
         }
     }
