@@ -54,14 +54,13 @@ fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
             .padding(padding)
             .fillMaxHeight()
             .fillMaxWidth(),
-        verticalArrangement = Arrangement.SpaceEvenly,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             ScanResultsCount(model = model)
             Button(onClick = {
@@ -71,7 +70,11 @@ fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
             }
         }
         Legend(modifier = Modifier.fillMaxWidth(), model = model)
-        OuiPieChart(model = model)
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            OuiPieChart(
+                modifier = Modifier.fillMaxWidth(),
+                model = model)
+        }
     }
 }
 
