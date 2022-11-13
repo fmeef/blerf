@@ -1,5 +1,6 @@
 package net.ballmerlabs.lesnoop
 
+import android.content.res.Configuration
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -15,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rxjava3.subscribeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -24,7 +26,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.bytebeats.views.charts.pie.PieChart
 import me.bytebeats.views.charts.pie.PieChartData
-
 
 @Composable
 fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
@@ -43,20 +44,17 @@ fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
                     out.close()
                 }
             } else {
-               withContext(Dispatchers.Main)  {
-                   Toast.makeText(context, context.getText(R.string.invalid_file_path), Toast.LENGTH_LONG).show()
-               }
+                withContext(Dispatchers.Main)  {
+                    Toast.makeText(context, context.getText(R.string.invalid_file_path), Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
-    Column(
-        modifier = Modifier
-            .padding(padding)
-            .fillMaxHeight()
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+
+    val configuration = LocalConfiguration.current
+
+    Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
@@ -69,11 +67,35 @@ fun EmptyTest(padding: PaddingValues, model: ScanViewModel) {
                 Text(text = stringResource(id = R.string.export))
             }
         }
-        Legend(modifier = Modifier.fillMaxWidth(), model = model)
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            OuiPieChart(
-                modifier = Modifier.fillMaxWidth(),
-                model = model)
+        when (configuration.orientation) {
+            Configuration.ORIENTATION_PORTRAIT -> Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.Start
+            ) {
+                Legend(model = model)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    OuiPieChart(
+                        modifier = Modifier.fillMaxSize(),
+                        model = model)
+                }
+            }
+            else -> Row(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.Top
+            ) {
+                Legend(model = model)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    OuiPieChart(
+                        modifier = Modifier.fillMaxSize(),
+                        model = model)
+                }
+            }
         }
     }
 }
