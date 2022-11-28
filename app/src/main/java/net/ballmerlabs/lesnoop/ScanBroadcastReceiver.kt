@@ -46,10 +46,10 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
                         context,
                         SCAN_REQUEST_CODE,
                         it,
-                        PendingIntent.FLAG_MUTABLE
+                        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_CANCEL_CURRENT
                     )
                 } else {
-                    PendingIntent.getBroadcast(context, SCAN_REQUEST_CODE, it, 0)
+                    PendingIntent.getBroadcast(context, SCAN_REQUEST_CODE, it, PendingIntent.FLAG_CANCEL_CURRENT)
                 }
             }
     }
