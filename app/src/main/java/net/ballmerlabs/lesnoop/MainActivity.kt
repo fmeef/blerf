@@ -57,9 +57,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var service: ScanSnoopService
     private var bound = false
 
-    @Inject
-    lateinit var ouiParser: OuiParser
-
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, bindService: IBinder) {
             val binder = bindService as ScanSnoopService.SnoopBinder
