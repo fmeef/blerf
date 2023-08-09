@@ -3,6 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
     id 'com.google.dagger.hilt.android'
+    id 'com.google.devtools.ksp'
 }
 
 android {
@@ -25,7 +26,10 @@ android {
             annotationProcessorOptions {
                 arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
                 }
-            }
+        }
+        ksp {
+            arg('room.schemaLocation', "$projectDir/schemas")
+        }
     }
 
     buildTypes {
@@ -57,12 +61,12 @@ android {
 
 dependencies {
     def nav_version = "2.6.0"
-    def room_version = "2.5.1"
+    def room_version = "2.5.2"
 
     implementation "androidx.room:room-runtime:$room_version"
 
     // To use Kotlin annotation processing tool (kapt)
-    kapt "androidx.room:room-compiler:$room_version"
+    ksp "androidx.room:room-compiler:$room_version"
     // optional - RxJava3 support for Room
     implementation "androidx.room:room-rxjava3:$room_version"
 
@@ -71,15 +75,15 @@ dependencies {
     // optional - Test helpers
     testImplementation "androidx.room:room-testing:$room_version"
 
-    implementation 'androidx.paging:paging-compose:3.2.0-beta01'
+    implementation 'androidx.paging:paging-compose:3.2.0'
 
     implementation "com.polidea.rxandroidble3:rxandroidble:1.17.0"
     implementation "androidx.compose.runtime:runtime-rxjava3:$compose_version"
     implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
 
 
-    implementation "com.google.dagger:hilt-android:2.44"
-    kapt "com.google.dagger:hilt-compiler:2.44"
+    implementation "com.google.dagger:hilt-android:2.47"
+    kapt "com.google.dagger:hilt-compiler:2.47"
 
     // accompanist shit
     implementation "com.google.accompanist:accompanist-swiperefresh:0.27.0"
@@ -98,10 +102,10 @@ dependencies {
     implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
     implementation 'androidx.activity:activity-compose:1.7.2'
     implementation 'androidx.activity:activity-ktx:1.7.2'
-    implementation 'androidx.activity:activity:1.7.2'
+    implementation 'androidx.activity:activity-ktx:1.7.2'
     implementation "androidx.compose.ui:ui:$compose_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
-    implementation 'androidx.compose.material3:material3:1.2.0-alpha02'
+    implementation 'androidx.compose.material3:material3:1.2.0-alpha04'
     implementation "androidx.compose.foundation:foundation:$compose_version"
     testImplementation 'junit:junit:4.13.2'
     testImplementation "org.robolectric:robolectric:4.9.2"

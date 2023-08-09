@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.Log
 import com.polidea.rxandroidble3.RxBleClient
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import net.ballmerlabs.lesnoop.scan.BroadcastReceiverState
@@ -28,31 +29,37 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
 
     @Inject
     lateinit var scanBuilder: ScanSubcomponent.Builder
-    
+
+    @Inject
+    @ApplicationContext
+    lateinit var context: Context
+
     @Inject
     lateinit var state: BroadcastReceiverState
 
     @Inject
     @Named(Module.GLOBAL_SCAN)
     lateinit var scanner: Scanner
-    
-    private var disp: Disposable? = null
 
-    companion object {
-        fun newPendingIntent(context: Context): PendingIntent =
-            Intent(context, ScanBroadcastReceiver::class.java).let {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    PendingIntent.getBroadcast(
-                        context,
-                        SCAN_REQUEST_CODE,
-                        it,
-                        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_CANCEL_CURRENT
-                    )
-                } else {
-                    PendingIntent.getBroadcast(context, SCAN_REQUEST_CODE, it, PendingIntent.FLAG_CANCEL_CURRENT)
-                }
+    private var disp: Disposable? = null
+    fun newPendingIntent(): PendingIntent =
+        Intent(context, ScanBroadcastReceiver::class.java).let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.getBroadcast(
+                    context,
+                    SCAN_REQUEST_CODE,
+                    it,
+                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_CANCEL_CURRENT
+                )
+            } else {
+                PendingIntent.getBroadcast(
+                    context,
+                    SCAN_REQUEST_CODE,
+                    it,
+                    PendingIntent.FLAG_CANCEL_CURRENT
+                )
             }
-    }
+        }
 
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -77,9 +84,9 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
                         state.busy.set(false)
                     }
                     .subscribe(
-                    { Log.v("debug", "inserted background scan") },
-                    { err -> Log.e("debug", "failed to insert background scan $err")}
-                )
+                        { Log.v("debug", "inserted background scan") },
+                        { err -> Log.e("debug", "failed to insert background scan $err") }
+                    )
 
                 Log.v("debug", "background scan result $result")
             }

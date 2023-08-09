@@ -2,6 +2,7 @@ package net.ballmerlabs.lesnoop.scan
 
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.RxBleDevice
@@ -54,7 +55,6 @@ class ScannerImpl @Inject constructor(
 ) : Scanner {
     private val disp = CompositeDisposable()
 
-    private val pendingIntent: PendingIntent = ScanBroadcastReceiver.newPendingIntent(context)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun updatePrefScan(isScanning: Boolean) {
@@ -72,19 +72,17 @@ class ScannerImpl @Inject constructor(
     }
 
     override fun scanBackground() {
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
-            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-            .setLegacy(false)
-            .build()
-        val filter = ScanFilter.Builder().build()
-        client.backgroundScanner.scanBleDeviceInBackground(pendingIntent, settings, filter)
+        context.applicationContext.startService(
+            Intent(context.applicationContext, ScanService::class.java)
+        )
         updatePrefScan(true)
     }
 
     override fun stopScanBackground() {
-        client.backgroundScanner.stopBackgroundBleScan(pendingIntent)
         //ontext.unregisterReceiver(reciever)
+        context.applicationContext.stopService(
+            Intent(context.applicationContext, ScanService::class.java)
+        )
         updatePrefScan(false)
     }
 
