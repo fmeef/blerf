@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import com.polidea.rxandroidble3.RxBleClient
+import com.polidea.rxandroidble3.scan.ScanResult
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.core.Observable
@@ -66,16 +67,22 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
         try {
             state.addTask {
                 val result = client.backgroundScanner.onScanResultReceived(intent)
-                state.batch(result).flatMapCompletable { r ->
+                state.batch(result).flatMapSingle { r ->
                     Log.w("debug", "batch results ${r.bleDevice.macAddress}")
-                    scanner.insertResult(r).flatMapCompletable { scanResult ->
-                        Log.w("debug", "discovering services ${r.bleDevice.macAddress}")
-                        scanner.discoverServices(r, scanResult)
-                            .onErrorComplete()
-                    }.doOnComplete { Log.w("debug","connect complete") }
-                        .timeout(30, TimeUnit.SECONDS)
-                        .onErrorComplete()
-                }
+                    scanner.insertResult(r)
+                }.reduce(mutableListOf<Pair<Long, ScanResult>>()) { list, v ->
+                    list.add(v)
+                    list
+                }.timeout(30, TimeUnit.SECONDS)
+                    .flatMapCompletable { dbIds ->
+                        Observable.fromIterable(dbIds).flatMapCompletable { scanResult ->
+                            scanner.discoverServices(scanResult.second, scanResult.first)
+                                .onErrorComplete()
+                        }.timeout(60, TimeUnit.SECONDS)
+
+                    }
+                    .doOnComplete { Log.w("debug", "connect complete") }
+                    .onErrorComplete()
             }
         } catch (exc: Exception) {
             Log.w("debug", "exception in broadcastreceiver $exc")

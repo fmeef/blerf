@@ -11,6 +11,6 @@ interface Scanner : Disposable {
     fun startScanAndDiscover(): Observable<ScanResult>
     fun scanBackground()
     fun stopScanBackground()
-    fun insertResult(scanResult: ScanResult): Single<Long>
+    fun insertResult(scanResult: ScanResult): Single<Pair<Long, ScanResult>>
     fun discoverServices(scanResult: ScanResult, dbid: Long? = null): Completable
 }

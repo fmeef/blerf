@@ -91,7 +91,7 @@ class ScannerImpl @Inject constructor(
         updatePrefScan(false)
     }
 
-    override fun insertResult(scanResult: ScanResult): Single<Long> {
+    override fun insertResult(scanResult: ScanResult): Single<Pair<Long, ScanResult>> {
         return locationTagger.tagLocation(scanResult)
             .onErrorReturn {
                 DbScanResult(scanResult)
@@ -106,6 +106,7 @@ class ScannerImpl @Inject constructor(
                     .subscribeOn(dbScheduler)
 
             }
+            .map { r -> Pair(r, scanResult) }
     }
 
     private fun discoverServices(device: RxBleDevice, dbid: Long? = null): Completable {
