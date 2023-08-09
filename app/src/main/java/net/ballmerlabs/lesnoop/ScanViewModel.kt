@@ -48,7 +48,7 @@ class ScanViewModel @Inject constructor(
             .subscribeOn(dbScheduler)
             .flatMapObservable { r -> Observable.fromIterable(r) }
             .flatMapSingle { r -> ouiParser.ouiForDevice(r.macAddress) }
-            .filter { r -> r != "N/A" }
+           // .filter { r -> r != "N/A" }
             .reduce(HashMap<String, Int>()) { set, r ->
                 set.compute(r) { s, i ->
                     if (i == null) {

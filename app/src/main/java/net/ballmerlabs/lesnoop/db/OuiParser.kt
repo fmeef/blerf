@@ -48,10 +48,16 @@ class OuiParser @Inject constructor(
 
 
     fun ouiForDevice(device: RxBleDevice): Single<String> {
-        return oui.map { map -> map[ouiFromMac(device.macAddress)]?:"N/A" }
+        return oui.map { map ->
+            val oui = ouiFromMac(device.macAddress)
+            map[oui]?:oui
+        }
     }
     fun ouiForDevice(device: String): Single<String> {
-        return oui.map { map -> map[ouiFromMac(device)]?:"N/A" }
+        return oui.map { map ->
+            val oui = ouiFromMac(device)
+            map[oui]?:oui
+        }
     }
 
 }
