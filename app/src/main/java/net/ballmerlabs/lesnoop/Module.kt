@@ -33,7 +33,7 @@ class Module {
     @Singleton
     @Named(DB_SCHEDULER)
     fun provideDbSceduler(): Scheduler {
-        return RxJavaPlugins.createSingleScheduler { r ->
+        return RxJavaPlugins.createIoScheduler { r ->
             Thread(r)
         }
     }

@@ -49,6 +49,7 @@ class ScanSnoopService : Service() {
             unregisterReceiver(broadcastReceiver)
         } catch (exc: Exception) {
             Log.e("debug", "failed to stop scan $exc")
+            exc.printStackTrace()
         }
     }
 

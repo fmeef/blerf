@@ -19,6 +19,7 @@ import net.ballmerlabs.lesnoop.*
 import net.ballmerlabs.lesnoop.db.ScanResultDao
 import net.ballmerlabs.lesnoop.db.entity.DbScanResult
 import net.ballmerlabs.lesnoop.db.entity.ServicesWithChildren
+import java.lang.IllegalArgumentException
 import java.sql.Time
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -80,9 +81,13 @@ class ScannerImpl @Inject constructor(
 
     override fun stopScanBackground() {
         //ontext.unregisterReceiver(reciever)
-        context.applicationContext.stopService(
-            Intent(context.applicationContext, ScanService::class.java)
-        )
+        try {
+            context.applicationContext.stopService(
+                Intent(context.applicationContext, ScanService::class.java)
+            )
+        } catch (exc: IllegalArgumentException) {
+            Log.w("debug", "service already stopped: $exc")
+        }
         updatePrefScan(false)
     }
 
@@ -105,8 +110,6 @@ class ScannerImpl @Inject constructor(
 
     private fun discoverServices(device: RxBleDevice, dbid: Long? = null): Completable {
         return device.establishConnection(false)
-            .timeout(10, TimeUnit.SECONDS)
-            .subscribeOn(scheduler)
             .concatMapSingle { connection ->
                 connection.discoverServices()
                     .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
@@ -150,7 +153,7 @@ class ScannerImpl @Inject constructor(
 
     private fun scanInternal(): Observable<ScanResult> {
         val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
             .setLegacy(false)
             .build()
@@ -159,7 +162,6 @@ class ScannerImpl @Inject constructor(
             settings,
             filter
         )
-            .delay(0, TimeUnit.SECONDS, scheduler)
             .doOnSubscribe { d -> disp.add(d) }
             .retryWhen { e -> handleUndocumentedScanThrottling<ScanResult>(e) }
             .doOnNext { r -> Log.v(NAME, "scan result $r") }

@@ -14,6 +14,7 @@ import io.reactivex.rxjava3.disposables.Disposable
 import net.ballmerlabs.lesnoop.scan.BroadcastReceiverState
 import net.ballmerlabs.lesnoop.scan.LocationTagger
 import net.ballmerlabs.lesnoop.scan.Scanner
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -41,7 +42,6 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
     @Named(Module.GLOBAL_SCAN)
     lateinit var scanner: Scanner
 
-    private var disp: Disposable? = null
     fun newPendingIntent(): PendingIntent =
         Intent(context, ScanBroadcastReceiver::class.java).let {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -64,31 +64,18 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         try {
-            val b = state.busy.getAndSet(true)
-            if (!b) {
+            state.addTask {
                 val result = client.backgroundScanner.onScanResultReceived(intent)
-                Observable.fromIterable(result).concatMapCompletable { r ->
+                state.batch(result).flatMapCompletable { r ->
+                    Log.w("debug", "batch results ${r.bleDevice.macAddress}")
                     scanner.insertResult(r).flatMapCompletable { scanResult ->
+                        Log.w("debug", "discovering services ${r.bleDevice.macAddress}")
                         scanner.discoverServices(r, scanResult)
-                    }
+                            .onErrorComplete()
+                    }.doOnComplete { Log.w("debug","connect complete") }
+                        .timeout(30, TimeUnit.SECONDS)
+                        .onErrorComplete()
                 }
-                    .doOnSubscribe { d -> disp = d }
-                    .doOnDispose {
-                        disp = null
-                        scanner.dispose()
-                        state.busy.set(false)
-                    }
-                    .doFinally {
-                        disp = null
-                        scanner.dispose()
-                        state.busy.set(false)
-                    }
-                    .subscribe(
-                        { Log.v("debug", "inserted background scan") },
-                        { err -> Log.e("debug", "failed to insert background scan $err") }
-                    )
-
-                Log.v("debug", "background scan result $result")
             }
         } catch (exc: Exception) {
             Log.w("debug", "exception in broadcastreceiver $exc")

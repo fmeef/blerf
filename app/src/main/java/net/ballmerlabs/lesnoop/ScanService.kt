@@ -39,7 +39,7 @@ class ScanService : Service() {
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-            .setLegacy(false)
+            .setLegacy(true)
             .build()
         client.backgroundScanner.scanBleDeviceInBackground(pendingIntent, settings, filter)
         return START_STICKY

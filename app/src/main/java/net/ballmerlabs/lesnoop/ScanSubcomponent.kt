@@ -60,7 +60,7 @@ interface ScanSubcomponent {
             @ScanScope
             @Named(SCHEDULER_COMPUTE)
             fun providesComputeScheduler(): Scheduler {
-                return RxJavaPlugins.createComputationScheduler { r ->
+                return RxJavaPlugins.createIoScheduler { r ->
                     Thread(r)
                 }
             }

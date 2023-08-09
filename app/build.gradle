@@ -77,7 +77,7 @@ dependencies {
 
     implementation 'androidx.paging:paging-compose:3.2.0'
 
-    implementation "com.polidea.rxandroidble3:rxandroidble:1.17.0"
+    implementation "com.polidea.rxandroidble3:rxandroidble:1.17.2"
     implementation "androidx.compose.runtime:runtime-rxjava3:$compose_version"
     implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
 
