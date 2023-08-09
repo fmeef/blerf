@@ -23,7 +23,7 @@
         android:theme="@style/Theme.Blerf"
         tools:targetApi="31">
         <service
-            android:name=".ScanService"
+            android:name=".BackgroundScanService"
             android:enabled="true"
             android:foregroundServiceType="location"
             android:exported="false"/>

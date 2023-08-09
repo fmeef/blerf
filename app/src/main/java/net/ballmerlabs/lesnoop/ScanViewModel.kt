@@ -13,9 +13,11 @@ import io.reactivex.rxjava3.disposables.Disposable
 import me.bytebeats.views.charts.pie.PieChartData
 import net.ballmerlabs.lesnoop.db.OuiParser
 import net.ballmerlabs.lesnoop.db.ScanResultDao
+import net.ballmerlabs.lesnoop.scan.Scanner
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Named
+import javax.inject.Provider
 
 @HiltViewModel
 class ScanViewModel @Inject constructor(

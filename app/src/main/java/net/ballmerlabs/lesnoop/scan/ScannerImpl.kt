@@ -1,9 +1,14 @@
 package net.ballmerlabs.lesnoop.scan
 
-import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.switchMap
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.RxBleDevice
 import com.polidea.rxandroidble3.exceptions.BleScanException
@@ -20,7 +25,6 @@ import net.ballmerlabs.lesnoop.db.ScanResultDao
 import net.ballmerlabs.lesnoop.db.entity.DbScanResult
 import net.ballmerlabs.lesnoop.db.entity.ServicesWithChildren
 import java.lang.IllegalArgumentException
-import java.sql.Time
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -46,8 +50,6 @@ private fun <T : Any> handleUndocumentedScanThrottling(
 @ScanScope
 class ScannerImpl @Inject constructor(
     private val client: RxBleClient,
-    @Named(ScanSubcomponent.SCHEDULER_SCAN)
-    private val scheduler: Scheduler,
     private val database: ScanResultDao,
     @Named(Module.DB_SCHEDULER)
     private val dbScheduler: Scheduler,
@@ -55,7 +57,27 @@ class ScannerImpl @Inject constructor(
     private val locationTagger: LocationTagger,
 ) : Scanner {
     private val disp = CompositeDisposable()
+    private lateinit var mService: BackgroundScanService
+    private var mBound = MutableLiveData<Boolean>()
 
+    /** Defines callbacks for service binding, passed to bindService().  */
+    private val connection = object : ServiceConnection {
+
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance.
+            val binder = service as BackgroundScanService.LocalBinder
+            mService = binder.getService()
+            mBound.postValue(true)
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            mBound.postValue(false)
+        }
+    }
+
+    override fun serviceState(): LiveData<Boolean> {
+        return mBound.switchMap { v-> if(v) mService.running else mBound}
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun updatePrefScan(isScanning: Boolean) {
@@ -73,9 +95,10 @@ class ScannerImpl @Inject constructor(
     }
 
     override fun scanBackground() {
-        context.applicationContext.startService(
-            Intent(context.applicationContext, ScanService::class.java)
-        )
+        val intent = Intent(context.applicationContext, BackgroundScanService::class.java)
+
+        context.applicationContext.startService(intent)
+        context.applicationContext.bindService(intent, connection, 0)
         updatePrefScan(true)
     }
 
@@ -83,7 +106,7 @@ class ScannerImpl @Inject constructor(
         //ontext.unregisterReceiver(reciever)
         try {
             context.applicationContext.stopService(
-                Intent(context.applicationContext, ScanService::class.java)
+                Intent(context.applicationContext, BackgroundScanService::class.java)
             )
         } catch (exc: IllegalArgumentException) {
             Log.w("debug", "service already stopped: $exc")

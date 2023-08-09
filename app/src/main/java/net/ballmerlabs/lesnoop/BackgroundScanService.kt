@@ -2,21 +2,24 @@ package net.ballmerlabs.lesnoop
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
+import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.MutableLiveData
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.scan.ScanFilter
 import com.polidea.rxandroidble3.scan.ScanSettings
 import dagger.hilt.android.AndroidEntryPoint
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ScanService : Service() {
+class BackgroundScanService : Service() {
+
+    val running = MutableLiveData(false)
+
+    private val binder = LocalBinder()
 
     @Inject
     lateinit var client: RxBleClient
@@ -42,11 +45,12 @@ class ScanService : Service() {
             .setLegacy(true)
             .build()
         client.backgroundScanner.scanBleDeviceInBackground(pendingIntent, settings, filter)
+        running.postValue(true)
         return START_STICKY
     }
-
     override fun onDestroy() {
         super.onDestroy()
+        running.postValue(false)
         val pendingIntent = scanBroadcastReceiver.newPendingIntent()
         client.backgroundScanner.stopBackgroundBleScan(pendingIntent)
         stopForeground(Service.STOP_FOREGROUND_REMOVE)
@@ -63,11 +67,15 @@ class ScanService : Service() {
         manager.createNotificationChannel(channel)
     }
     override fun onBind(intent: Intent): IBinder? {
-       return null
+       return binder
     }
 
     companion object {
         private const val NOTIFICATION_CHANNEL_FOREGROUND = "foreground"
-
     }
+    inner class LocalBinder : Binder() {
+        // Return this instance of LocalService so clients can call public methods.
+        fun getService(): BackgroundScanService = this@BackgroundScanService
+    }
+
 }

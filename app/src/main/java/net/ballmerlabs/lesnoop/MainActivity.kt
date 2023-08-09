@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rxjava3.subscribeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,21 +54,9 @@ val PREF_BACKGROUND_SCAN = booleanPreferencesKey("background_scan")
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var scanSnoopService: ScanSnoopService
 
-    private lateinit var service: ScanSnoopService
-    private var bound = false
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, bindService: IBinder) {
-            val binder = bindService as ScanSnoopService.SnoopBinder
-            service = binder.getService()
-            bound = true
-        }
-
-        override fun onServiceDisconnected(p0: ComponentName) {
-            bound = false
-        }
-    }
 
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,23 +64,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             BlerfTheme {
                 Body {
-                    service
+                    scanSnoopService
                 }
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        Intent(this, ScanSnoopService::class.java).also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        unbindService(connection)
-        bound = false
     }
 }
 
@@ -178,8 +154,9 @@ fun ScanDialog(s: () -> ScanSnoopService) {
 
     val service by remember { derivedStateOf(s) }
     val context = LocalContext.current
-
-    val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
+    val model = hiltViewModel<ScanViewModel>()
+    val started: Boolean? by service.serviceState().observeAsState()
+  //  val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
 
     ScopePermissions {
         Surface(
@@ -199,13 +176,13 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                 Row {
                     Button(
                         onClick = { service.startScanToDb() },
-                        enabled = !p.value
+                        enabled = !(started?:false)
                     ) {
                         Text(text = stringResource(id = R.string.start_scan))
                     }
                     Button(
                         onClick = { service.stopScan() },
-                        enabled = p.value
+                        enabled = started?:false
                     ) {
                         Text(text = stringResource(id = R.string.stop_scan))
                     }
