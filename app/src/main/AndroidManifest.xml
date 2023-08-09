@@ -30,11 +30,6 @@
 
         <receiver android:name=".ScanBroadcastReceiver" />
 
-        <service
-            android:name=".ScanSnoopService"
-            android:enabled="true"
-            android:exported="false" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true"
