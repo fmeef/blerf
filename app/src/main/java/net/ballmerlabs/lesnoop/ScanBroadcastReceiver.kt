@@ -74,10 +74,12 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
                     list
                 }.timeout(30, TimeUnit.SECONDS)
                     .flatMapCompletable { dbIds ->
-                        Observable.fromIterable(dbIds).flatMapCompletable { scanResult ->
+                        Observable.fromIterable(dbIds)
+                            .delay(1, TimeUnit.SECONDS)
+                            .concatMapCompletable { scanResult ->
                             scanner.discoverServices(scanResult.second, scanResult.first)
                                 .onErrorComplete()
-                        }.timeout(60, TimeUnit.SECONDS)
+                        }
 
                     }
                     .doOnComplete { Log.w("debug", "connect complete") }

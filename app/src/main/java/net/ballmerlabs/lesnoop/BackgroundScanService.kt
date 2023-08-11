@@ -6,6 +6,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 import com.polidea.rxandroidble3.RxBleClient
@@ -29,6 +30,7 @@ class BackgroundScanService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        Log.w("debug", "service started")
         val pendingIntent = scanBroadcastReceiver.newPendingIntent()
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_FOREGROUND)
             .setContentTitle("Subrosa")
@@ -50,6 +52,7 @@ class BackgroundScanService : Service() {
     }
     override fun onDestroy() {
         super.onDestroy()
+        Log.w("debug", "service stopped")
         running.postValue(false)
         val pendingIntent = scanBroadcastReceiver.newPendingIntent()
         client.backgroundScanner.stopBackgroundBleScan(pendingIntent)

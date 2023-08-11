@@ -134,7 +134,7 @@ class ScannerImpl @Inject constructor(
 
     private fun discoverServices(device: RxBleDevice, dbid: Long? = null): Completable {
         return device.establishConnection(false)
-            .concatMapSingle { connection ->
+            .flatMapSingle { connection ->
                 connection.discoverServices()
                     .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
                     .map { s -> ServicesWithChildren(s) }
@@ -160,6 +160,7 @@ class ScannerImpl @Inject constructor(
                     .onErrorComplete()
                     .toSingleDefault(connection)
             }
+            .doOnError { err -> Log.e("debug", "connection error $err") }
             .firstOrError()
             .ignoreElement()
 
