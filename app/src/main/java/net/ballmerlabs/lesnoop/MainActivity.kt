@@ -35,6 +35,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberPermissionState
 import net.ballmerlabs.lesnoop.db.OuiParser
 import net.ballmerlabs.lesnoop.ui.theme.BlerfTheme
@@ -51,6 +52,12 @@ const val PREF_NAME = "scanprefs"
 val Context.rxPrefs by rxPreferencesDataStore(PREF_NAME)
 
 val PREF_BACKGROUND_SCAN = booleanPreferencesKey("background_scan")
+
+@OptIn(ExperimentalPermissionsApi::class)
+data class PermissionText(
+    val permission: PermissionState,
+    val excuse: String
+)
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -110,7 +117,11 @@ fun ScopePermissions(
     content: @Composable () -> Unit
 ) {
     val permissions = mutableListOf(
-        rememberPermissionState(permission = Manifest.permission.ACCESS_FINE_LOCATION)
+        PermissionText(
+            permission = rememberPermissionState(permission = Manifest.permission.ACCESS_FINE_LOCATION),
+            excuse = "Blerf needs the ACCESS_FINE_LOCATION permission for performing offline bluetooth scans in the background" +
+                    " and locally geotagging the discovered devices. This information is never shared or transmitted in any way."
+        )
     )
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -118,13 +129,17 @@ fun ScopePermissions(
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT
         )) {
-            val p = rememberPermissionState(permission = x)
+            val p = PermissionText(
+                permission = rememberPermissionState(permission = x),
+                excuse = "The $x permission is required for" +
+                        " discovering bluetooth devices in the background"
+            )
             permissions.add(p)
         }
     }
 
     val granted = permissions.all { s ->
-        s.status == com.google.accompanist.permissions.PermissionStatus.Granted
+        s.permission.status == com.google.accompanist.permissions.PermissionStatus.Granted
     }
     if (granted) {
         Box(modifier = modifier) {
@@ -136,11 +151,11 @@ fun ScopePermissions(
             contentAlignment = Alignment.Center
         ) {
             val p =
-                permissions.first { p -> p.status != com.google.accompanist.permissions.PermissionStatus.Granted }
+                permissions.first { p -> p.permission.status != com.google.accompanist.permissions.PermissionStatus.Granted }
             Button(
-                onClick = { p.launchPermissionRequest() }
+                onClick = { p.permission.launchPermissionRequest() }
             ) {
-                Text(text = stringResource(id = R.string.not_granted, p.permission))
+                Text(modifier = Modifier.padding(8.dp),text = p.excuse)
             }
         }
     }

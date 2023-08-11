@@ -11,7 +11,6 @@ import com.polidea.rxandroidble3.scan.ScanResult
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.core.Observable
-import io.reactivex.rxjava3.disposables.Disposable
 import net.ballmerlabs.lesnoop.scan.BroadcastReceiverState
 import net.ballmerlabs.lesnoop.scan.LocationTagger
 import net.ballmerlabs.lesnoop.scan.Scanner
@@ -65,9 +64,9 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         try {
-            state.addTask {
-                val result = client.backgroundScanner.onScanResultReceived(intent)
-                state.batch(result).flatMapSingle { r ->
+            val result = client.backgroundScanner.onScanResultReceived(intent)
+            state.batch(result, 5) { results ->
+                results.flatMapSingle { r ->
                     Log.w("debug", "batch results ${r.bleDevice.macAddress}")
                     scanner.insertResult(r)
                 }.reduce(mutableListOf<Pair<Long, ScanResult>>()) { list, v ->

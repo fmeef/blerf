@@ -18,26 +18,23 @@ class BroadcastReceiverState @Inject constructor() {
     private val disposable = AtomicReference<Disposable?>(null)
     private val batchCounter = AtomicInteger()
     private val batch = ConcurrentHashMap<ScanResult, Boolean>()
-    fun batch(scanResult: List<ScanResult>, count: Int = 5): Flowable<ScanResult> {
-        return Flowable.defer {
-            batch.putAll(scanResult.map { v -> Pair(v, true) })
-            val c = batchCounter.accumulateAndGet(count) { v, acc ->
-                val next = v + 1
-                if (next > acc) {
-                    0
-                } else {
-                    next
-                }
-            }
-            if (c < count) {
-                Flowable.empty()
-            } else if (batch.isNotEmpty()) {
-                val out = batch.keys().toList()
-                batch.clear()
-                Flowable.fromIterable(out)
-                    .distinct { v -> v.bleDevice.macAddress }
+    fun batch(scanResult: List<ScanResult>, count: Int, func: (result: Flowable<ScanResult>) -> Completable) {
+        batch.putAll(scanResult.map { v -> Pair(v, true) })
+        val c = batchCounter.accumulateAndGet(count) { v, acc ->
+            val next = v + 1
+            if (next > acc) {
+                0
             } else {
-                Flowable.empty()
+                next
+            }
+        }
+        if (batch.isNotEmpty() && c >= count) {
+            val out = batch.keys().toList()
+            batch.clear()
+            addTask {
+                val f = Flowable.fromIterable(out)
+                    .distinct { v -> v.bleDevice.macAddress }
+                func(f)
             }
         }
     }
