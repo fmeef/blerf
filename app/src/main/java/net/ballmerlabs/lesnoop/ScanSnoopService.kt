@@ -64,9 +64,12 @@ class ScanSnoopService @Inject constructor(
     fun serviceState(): LiveData<Boolean> {
         return mBound.switchMap { v-> if(v) mService.running else MutableLiveData(false)}
     }
-    fun startScanToDb() {
+    fun startScanToDb(legacy: Boolean) {
         try {
             val intent = Intent(applicationContext, BackgroundScanService::class.java)
+                .apply {
+                    putExtra(BackgroundScanService.EXTRA_LEGACY_MODE, legacy)
+                }
             val scanner = applicationContext.getScan(scanBuilder)
             val old = scan.getAndSet(scanner)
             stopScanBackground()

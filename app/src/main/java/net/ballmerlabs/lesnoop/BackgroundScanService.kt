@@ -8,6 +8,7 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationCompat.ServiceNotificationBehavior
 import androidx.lifecycle.MutableLiveData
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.scan.ScanFilter
@@ -31,9 +32,10 @@ class BackgroundScanService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         Log.w("debug", "service started")
+        val legacy = intent?.getBooleanExtra(EXTRA_LEGACY_MODE, false)?:false
         val pendingIntent = scanBroadcastReceiver.newPendingIntent()
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_FOREGROUND)
-            .setContentTitle("Subrosa")
+            .setContentTitle("Blerf")
             .setContentText("Scanning...\n(this uses location permission, but not actual geolocation)")
             .setSmallIcon(R.drawable.ic_launcher_background)
             .setTicker("fmef am tire")
@@ -44,7 +46,7 @@ class BackgroundScanService : Service() {
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-            .setLegacy(true)
+            .setLegacy(legacy)
             .build()
         client.backgroundScanner.scanBleDeviceInBackground(pendingIntent, settings, filter)
         running.postValue(true)
@@ -75,6 +77,7 @@ class BackgroundScanService : Service() {
 
     companion object {
         private const val NOTIFICATION_CHANNEL_FOREGROUND = "foreground"
+        const val EXTRA_LEGACY_MODE = "legacy"
     }
     inner class LocalBinder : Binder() {
         // Return this instance of LocalService so clients can call public methods.

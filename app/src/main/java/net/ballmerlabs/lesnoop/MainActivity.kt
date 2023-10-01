@@ -21,6 +21,7 @@ import androidx.compose.runtime.rxjava3.subscribeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -168,8 +169,10 @@ fun ScopePermissions(
 fun ScanDialog(s: () -> ScanSnoopService) {
 
     val service by remember { derivedStateOf(s) }
-    val context = LocalContext.current
-    val model = hiltViewModel<ScanViewModel>()
+    val legacy = remember { mutableStateOf(false) }
+    val selected = remember {
+      mutableStateOf("")
+    }
     val started: Boolean? by service.serviceState().observeAsState()
   //  val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
 
@@ -188,9 +191,17 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Text(text = stringResource(id = R.string.scan_disclaimer))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = stringResource(id = R.string.legacy_toggle))
+                    Switch(checked = legacy.value, onCheckedChange = { v -> legacy.value = v })
+                }
                 Row {
                     Button(
-                        onClick = { service.startScanToDb() },
+                        onClick = { service.startScanToDb(legacy.value) },
                         enabled = !(started?:false)
                     ) {
                         Text(text = stringResource(id = R.string.start_scan))

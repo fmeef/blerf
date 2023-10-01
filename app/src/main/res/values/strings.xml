@@ -17,5 +17,6 @@
     <string name="invalid_file_path">Invalid file path</string>
     <string name="export">Export database</string>
     <string name="indexed">Currently indexed %1$d devices</string>
+    <string name="legacy_toggle">Legacy only scanning</string>
 
 </resources>
