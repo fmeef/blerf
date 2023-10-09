@@ -79,6 +79,7 @@ class ScanSnoopService @Inject constructor(
             val intent = Intent(applicationContext, BackgroundScanService::class.java)
                 .apply {
                     putExtra(BackgroundScanService.EXTRA_LEGACY_MODE, legacy)
+                    putExtra(BackgroundScanService.EXTRA_PHY, phyval)
                 }
             val scanner = applicationContext.getScan(scanBuilder)
             val old = scan.getAndSet(scanner)
