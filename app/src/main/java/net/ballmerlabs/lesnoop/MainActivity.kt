@@ -171,7 +171,7 @@ fun ScanDialog(s: () -> ScanSnoopService) {
     val service by remember { derivedStateOf(s) }
     val legacy = remember { mutableStateOf(false) }
     val selected = remember {
-      mutableStateOf("")
+      mutableStateListOf<String>()
     }
     val started: Boolean? by service.serviceState().observeAsState()
   //  val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
@@ -199,9 +199,48 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                     Text(text = stringResource(id = R.string.legacy_toggle))
                     Switch(checked = legacy.value, onCheckedChange = { v -> legacy.value = v })
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "PHY")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val mode = ScanSnoopService.PHY_CODED
+                            Checkbox(checked = selected.contains(mode), onCheckedChange = { v ->
+                                if (v) selected.add(mode) else selected.remove(mode)
+                            }
+                            )
+                            Text(text = mode)
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val mode = ScanSnoopService.PHY_1M
+                            Checkbox(checked = selected.contains(mode), onCheckedChange = { v ->
+                                if (v) selected.add(mode) else selected.remove(mode)
+                            }
+                            )
+                            Text(text = mode)
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val mode = ScanSnoopService.PHY_2M
+                            Checkbox(checked = selected.contains(mode), onCheckedChange = { v ->
+                                if (v) selected.add(mode) else selected.remove(mode)
+                            }
+                            )
+                            Text(text = mode)
+                        }
+                    }
+                }
                 Row {
                     Button(
-                        onClick = { service.startScanToDb(legacy.value) },
+                        onClick = { service.startScanToDb(legacy.value, selected) },
                         enabled = !(started?:false)
                     ) {
                         Text(text = stringResource(id = R.string.start_scan))

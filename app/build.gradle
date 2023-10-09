@@ -84,7 +84,7 @@ dependencies {
 
     implementation 'androidx.lifecycle:lifecycle-reactivestreams-ktx:2.6.2'
 
-    implementation "com.polidea.rxandroidble3:rxandroidble:1.17.2"
+    api "com.polidea.rxandroidble3:rxandroidble:1.17.2"
     implementation "androidx.compose.runtime:runtime-rxjava3:$compose_version"
     implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
 

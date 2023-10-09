@@ -1,6 +1,7 @@
 package net.ballmerlabs.lesnoop
 
 import android.app.Service
+import android.bluetooth.BluetoothDevice
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -64,8 +65,17 @@ class ScanSnoopService @Inject constructor(
     fun serviceState(): LiveData<Boolean> {
         return mBound.switchMap { v-> if(v) mService.running else MutableLiveData(false)}
     }
-    fun startScanToDb(legacy: Boolean) {
+    fun startScanToDb(legacy: Boolean, phy: List<String>) {
         try {
+            var phyval = 0
+            for (p in phy) {
+                phyval = phyval or when(p) {
+                    PHY_1M -> BluetoothDevice.PHY_LE_2M_MASK
+                    PHY_2M -> BluetoothDevice.PHY_LE_2M_MASK
+                    PHY_CODED -> BluetoothDevice.PHY_LE_CODED_MASK
+                    else -> 0
+                }
+            }
             val intent = Intent(applicationContext, BackgroundScanService::class.java)
                 .apply {
                     putExtra(BackgroundScanService.EXTRA_LEGACY_MODE, legacy)
@@ -94,5 +104,11 @@ class ScanSnoopService @Inject constructor(
             Log.e("debug", "failed to stop scan $exc")
             exc.printStackTrace()
         }
+    }
+
+    companion object {
+        const val PHY_CODED = "coded"
+        const val PHY_1M = "1M"
+        const val PHY_2M = "2M"
     }
 }

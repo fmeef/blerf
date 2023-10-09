@@ -33,6 +33,7 @@ class BackgroundScanService : Service() {
         super.onStartCommand(intent, flags, startId)
         Log.w("debug", "service started")
         val legacy = intent?.getBooleanExtra(EXTRA_LEGACY_MODE, false)?:false
+        val phy = intent?.getIntExtra(EXTRA_PHY, 0)?:0
         val pendingIntent = scanBroadcastReceiver.newPendingIntent()
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_FOREGROUND)
             .setContentTitle("Blerf")
@@ -46,6 +47,7 @@ class BackgroundScanService : Service() {
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+            .setPreferredPhy(phy)
             .setLegacy(legacy)
             .build()
         client.backgroundScanner.scanBleDeviceInBackground(pendingIntent, settings, filter)
@@ -78,6 +80,7 @@ class BackgroundScanService : Service() {
     companion object {
         private const val NOTIFICATION_CHANNEL_FOREGROUND = "foreground"
         const val EXTRA_LEGACY_MODE = "legacy"
+        const val EXTRA_PHY = "phy"
     }
     inner class LocalBinder : Binder() {
         // Return this instance of LocalService so clients can call public methods.
