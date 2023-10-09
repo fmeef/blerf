@@ -1,0 +1,3 @@
+[submodule "RxAndroidBle"]
+	path = RxAndroidBle
+	url = https://github.com/fmeef/RxAndroidBle.git

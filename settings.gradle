@@ -12,5 +12,12 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+
+includeBuild('RxAndroidBle') {
+    dependencySubstitution {
+        substitute module('com.polidea.rxandroidble2:rxandroidble3') using project(':rxandroidble3')
+        substitute module('com.polidea.rxandroidble2:mockclient') using project(':mockrxandroidble')
+    }
+}
 rootProject.name = "Blerf"
 include ':app'
