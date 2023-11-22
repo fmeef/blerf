@@ -11,6 +11,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.RxBleDevice
+import com.polidea.rxandroidble3.RxBlePhy
+import com.polidea.rxandroidble3.RxBlePhyOption
 import com.polidea.rxandroidble3.exceptions.BleScanException
 import com.polidea.rxandroidble3.scan.IsConnectable
 import com.polidea.rxandroidble3.scan.ScanFilter
@@ -55,6 +57,7 @@ class ScannerImpl @Inject constructor(
     private val dbScheduler: Scheduler,
     private val context: Context,
     private val locationTagger: LocationTagger,
+    private val service: ScanSnoopService
 ) : Scanner {
     private val disp = CompositeDisposable()
     private lateinit var mService: BackgroundScanService
@@ -134,6 +137,11 @@ class ScannerImpl @Inject constructor(
 
     private fun discoverServices(device: RxBleDevice, dbid: Long? = null): Completable {
         return device.establishConnection(false)
+            .flatMapSingle { c ->
+                val tx = service.phyToRxBle()
+                c.setPreferredPhy(tx, tx, RxBlePhyOption.PHY_OPTION_NO_PREFERRED)
+                    .ignoreElement().toSingleDefault(c)
+            }
             .flatMapSingle { connection ->
                 connection.discoverServices()
                     .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }

@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
@@ -18,6 +19,7 @@ import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rxjava3.subscribeAsState
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -26,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.rxjava3.rxPreferencesDataStore
@@ -35,6 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
+import androidx.preference.PreferenceManager
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberPermissionState
@@ -42,6 +46,7 @@ import net.ballmerlabs.lesnoop.db.OuiParser
 import net.ballmerlabs.lesnoop.ui.theme.BlerfTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -156,7 +161,7 @@ fun ScopePermissions(
             Button(
                 onClick = { p.permission.launchPermissionRequest() }
             ) {
-                Text(modifier = Modifier.padding(8.dp),text = p.excuse)
+                Text(modifier = Modifier.padding(8.dp), text = p.excuse)
             }
         }
     }
@@ -171,10 +176,13 @@ fun ScanDialog(s: () -> ScanSnoopService) {
     val service by remember { derivedStateOf(s) }
     val legacy = remember { mutableStateOf(false) }
     val selected = remember {
-      mutableStateListOf<String>()
+        val t = mutableStateListOf<String>()
+        t.addAll(service.getPhy())
+        t
     }
+    val primary = remember { mutableStateOf(service.getScanPhy()) }
     val started: Boolean? by service.serviceState().observeAsState()
-  //  val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
+    //  val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
 
     ScopePermissions {
         Surface(
@@ -199,55 +207,45 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                     Text(text = stringResource(id = R.string.legacy_toggle))
                     Switch(checked = legacy.value, onCheckedChange = { v -> legacy.value = v })
                 }
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = "PHY")
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val mode = ScanSnoopService.PHY_CODED
-                            Checkbox(checked = selected.contains(mode), onCheckedChange = { v ->
-                                if (v) selected.add(mode) else selected.remove(mode)
-                            }
-                            )
-                            Text(text = mode)
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val mode = ScanSnoopService.PHY_1M
-                            Checkbox(checked = selected.contains(mode), onCheckedChange = { v ->
-                                if (v) selected.add(mode) else selected.remove(mode)
-                            }
-                            )
-                            Text(text = mode)
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val mode = ScanSnoopService.PHY_2M
-                            Checkbox(checked = selected.contains(mode), onCheckedChange = { v ->
-                                if (v) selected.add(mode) else selected.remove(mode)
-                            }
-                            )
-                            Text(text = mode)
-                        }
+                        PhyButton(mode = ScanSnoopService.PHY_CODED, selected = selected)
+                        PhyButton(mode = ScanSnoopService.PHY_1M, selected = selected)
+                        PhyButton(mode = ScanSnoopService.PHY_2M, selected = selected)
                     }
+                }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = "Primary PHY")
+                    ScanPhyButton(
+                        mode = ScanSnoopService.PHY_CODED,
+                        selected = primary
+                    )
+                    ScanPhyButton(
+                        mode = ScanSnoopService.PHY_1M,
+                        selected = primary
+                    )
+                    ScanPhyButton(
+                        mode = ScanSnoopService.PHY_2M,
+                        selected = primary
+                    )
                 }
                 Row {
                     Button(
-                        onClick = { service.startScanToDb(legacy.value, selected) },
-                        enabled = !(started?:false)
+                        onClick = { service.startScanToDb(legacy.value, primary.value) },
+                        enabled = !(started ?: false)
                     ) {
                         Text(text = stringResource(id = R.string.start_scan))
                     }
                     Button(
                         onClick = { service.stopScan() },
-                        enabled = started?:false
+                        enabled = started ?: false
                     ) {
                         Text(text = stringResource(id = R.string.stop_scan))
                     }
@@ -255,6 +253,37 @@ fun ScanDialog(s: () -> ScanSnoopService) {
             }
 
         }
+    }
+}
+
+@Composable
+fun ScanPhyButton(modifier: Modifier = Modifier, mode: String, selected: MutableState<String>) {
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected.value == mode, onClick = {
+            prefs.edit {
+                putString(ScanSnoopService.PREF_PRIMARY_PHY, mode)
+            }
+            selected.value = mode
+        })
+        Text(text = mode)
+    }
+}
+
+@Composable
+fun PhyButton(modifier: Modifier = Modifier, mode: String, selected: SnapshotStateList<String>) {
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = selected.contains(mode), onCheckedChange = { v ->
+            if (v) selected.add(mode) else selected.remove(mode)
+            prefs.edit {
+                putStringSet(ScanSnoopService.PREF_PHY, selected.toSet())
+            }
+        }
+        )
+        Text(text = mode)
     }
 }
 

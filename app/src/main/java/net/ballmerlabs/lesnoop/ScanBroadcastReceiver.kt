@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import androidx.preference.Preference
+import androidx.preference.PreferenceManager
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.scan.ScanResult
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,13 +25,8 @@ private const val SCAN_REQUEST_CODE = 44
 @AndroidEntryPoint
 class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
     @Inject
-    lateinit var locationTagger: LocationTagger
-
-    @Inject
     lateinit var client: RxBleClient
 
-    @Inject
-    lateinit var scanBuilder: ScanSubcomponent.Builder
 
     @Inject
     @ApplicationContext
@@ -37,6 +34,9 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
 
     @Inject
     lateinit var state: BroadcastReceiverState
+
+    @Inject
+    lateinit var scanSnoopService: ScanSnoopService
 
     @Inject
     @Named(Module.GLOBAL_SCAN)

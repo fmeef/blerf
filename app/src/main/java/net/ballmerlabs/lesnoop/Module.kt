@@ -1,7 +1,10 @@
 package net.ballmerlabs.lesnoop
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.location.LocationManager
+import androidx.core.content.getSystemService
 import androidx.room.Room
 import com.polidea.rxandroidble3.RxBleClient
 import net.ballmerlabs.lesnoop.db.ScanDatabase
@@ -57,6 +60,12 @@ class Module {
             .addMigrations(MIGATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
+    }
+
+    @Provides
+    @Singleton
+    fun providesRawBluetoothManager(@ApplicationContext ctx: Context): BluetoothManager {
+        return ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     }
 
     @Provides

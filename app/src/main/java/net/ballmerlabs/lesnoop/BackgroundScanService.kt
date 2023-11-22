@@ -1,18 +1,21 @@
 package net.ballmerlabs.lesnoop
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanSettings
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationCompat.ServiceNotificationBehavior
 import androidx.lifecycle.MutableLiveData
 import com.polidea.rxandroidble3.RxBleClient
-import com.polidea.rxandroidble3.scan.ScanFilter
-import com.polidea.rxandroidble3.scan.ScanSettings
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -29,6 +32,9 @@ class BackgroundScanService : Service() {
     @Inject
     lateinit var scanBroadcastReceiver: ScanBroadcastReceiver
 
+    @Inject
+    lateinit var bluetoothManager: BluetoothManager
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         Log.w("debug", "service started")
@@ -41,16 +47,26 @@ class BackgroundScanService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_background)
             .setTicker("fmef am tire")
             .build()
-        val filter = ScanFilter.Builder()
-            .build()
         startForeground(1, notification)
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
-            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-            .setPreferredPhy(phy)
-            .setLegacy(legacy)
-            .build()
-        client.backgroundScanner.scanBleDeviceInBackground(pendingIntent, settings, filter)
+        val scanner = bluetoothManager.adapter?.bluetoothLeScanner
+        if(scanner != null) {
+            val settings = ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+                .setPhy(phy)
+                .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+                .setLegacy(legacy)
+                .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+                .build()
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.BLUETOOTH_SCAN
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                Log.w("debug", "starting scan with phy $phy")
+                scanner.startScan(listOf(ScanFilter.Builder().build()), settings, pendingIntent)
+            }
+        }
+
         running.postValue(true)
         return START_STICKY
     }
