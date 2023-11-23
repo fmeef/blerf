@@ -20,5 +20,7 @@
     <string name="indexed">Currently indexed %1$d devices</string>
     <string name="legacy_toggle">Legacy only scanning</string>
     <string name="connect_mode">Connect during scan</string>
+    <string name="connect_phy">PHYs for connection</string>
+    <string name="scan_phy">PHY for scanning</string>
 
 </resources>

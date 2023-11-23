@@ -307,7 +307,7 @@ fun ScanPage(s: () -> ScanSnoopService) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = "PHY")
+                Text(text = stringResource(id = R.string.connect_phy))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -321,7 +321,7 @@ fun ScanPage(s: () -> ScanSnoopService) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = "Primary PHY")
+                Text(text = stringResource(id = R.string.scan_phy))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -418,7 +418,7 @@ fun Body(service: () -> ScanSnoopService) {
         content = { padding ->
             NavHost(navController = navController, startDestination = NAV_PREFS) {
                 composable(NAV_PREFS) {
-                    model.topText.value = stringResource(id = R.string.nearby)
+                    model.topText.value = stringResource(id = R.string.settings)
                     ScopePermissions(
                         modifier =
                         Modifier
@@ -433,7 +433,10 @@ fun Body(service: () -> ScanSnoopService) {
                     model.topText.value = stringResource(id = R.string.database)
                     EmptyTest(padding, model)
                 }
-                composable(NAV_SCAN) { DeviceList(padding = padding, model = model) }
+                composable(NAV_SCAN) {
+                    model.topText.value = stringResource(id = R.string.nearby)    
+                    DeviceList(padding = padding, model = model) 
+                }
                 dialog(NAV_DIALOG) { ScanDialog(Modifier, service) }
             }
         },

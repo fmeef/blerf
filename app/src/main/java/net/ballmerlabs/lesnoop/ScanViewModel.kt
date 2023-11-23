@@ -1,12 +1,15 @@
 package net.ballmerlabs.lesnoop
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import com.polidea.rxandroidble3.scan.ScanResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.*
 import io.reactivex.rxjava3.disposables.Disposable
@@ -25,10 +28,10 @@ class ScanViewModel @Inject constructor(
     val scanBuilder: ScanSubcomponent.Builder,
     @Named(Module.DB_PATH) val dbPath: File,
     private val ouiParser: OuiParser,
-    @Named(Module.DB_SCHEDULER) private val dbScheduler: Scheduler
+    @Named(Module.DB_SCHEDULER) private val dbScheduler: Scheduler,
 ) : ViewModel() {
     val currentScans = mutableStateListOf<ScanResult>()
-    val topText = mutableStateOf("Nearby devices")
+    val topText = mutableStateOf("")
     var scanInProgress = mutableStateOf<Disposable?>(null)
 
     private val colorList = listOf(Color.Cyan, Color.Red, Color.Blue, Color.DarkGray, Color.Green, Color.Magenta, Color.Yellow)
