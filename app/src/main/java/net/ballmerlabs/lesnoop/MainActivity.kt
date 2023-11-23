@@ -434,7 +434,7 @@ fun Body(service: () -> ScanSnoopService) {
                     EmptyTest(padding, model)
                 }
                 composable(NAV_SCAN) {
-                    model.topText.value = stringResource(id = R.string.nearby)    
+                    model.topText.value = stringResource(id = R.string.nearby)
                     DeviceList(padding = padding, model = model) 
                 }
                 dialog(NAV_DIALOG) { ScanDialog(Modifier, service) }
