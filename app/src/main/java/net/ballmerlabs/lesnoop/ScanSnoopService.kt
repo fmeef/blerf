@@ -109,9 +109,9 @@ class ScanSnoopService @Inject constructor(
             prefs.getString(PREF_PRIMARY_PHY, PHY_1M) ?: PHY_1M
         }
         return when(phy) {
-            PHY_1M -> BluetoothDevice.PHY_LE_1M_MASK
-            PHY_2M -> BluetoothDevice.PHY_LE_2M_MASK
-            PHY_CODED -> BluetoothDevice.PHY_LE_CODED_MASK
+            PHY_1M -> BluetoothDevice.PHY_LE_1M
+            PHY_2M -> BluetoothDevice.PHY_LE_2M
+            PHY_CODED -> BluetoothDevice.PHY_LE_CODED
             else -> ScanSettings.PHY_LE_ALL_SUPPORTED
         }
     }
