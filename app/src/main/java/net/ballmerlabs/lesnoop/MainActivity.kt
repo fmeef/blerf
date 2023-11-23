@@ -1,14 +1,9 @@
 package net.ballmerlabs.lesnoop
 
 import android.Manifest
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -18,19 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.rxjava3.subscribeAsState
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.rxjava3.rxPreferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -42,14 +33,12 @@ import androidx.preference.PreferenceManager
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberPermissionState
-import net.ballmerlabs.lesnoop.db.OuiParser
 import net.ballmerlabs.lesnoop.ui.theme.BlerfTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+const val NAV_PREFS = "prefs"
 const val NAV_SCAN = "scan"
 const val NAV_DB = "database"
 const val NAV_DIALOG = "dialog"
@@ -167,62 +156,104 @@ fun ScopePermissions(
     }
 }
 
+@Composable
+fun ScanDialog(modifier: Modifier = Modifier, s: () -> ScanSnoopService) {
+    val service by remember { derivedStateOf(s) }
+    val started: Boolean? by service.serviceState().observeAsState()
+    val context = LocalContext.current
+    val prefs = remember {
+        PreferenceManager.getDefaultSharedPreferences(context)
+    }
+    Surface(
+        modifier = Modifier
+            .background(
+                color = MaterialTheme.colorScheme.background,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(8.dp)
+    ) {
+        Row {
+            Button(
+                onClick = {
+                    val legacy = prefs.getBoolean(ScanSnoopService.PREF_LEGACY, false)
+                    val primary = prefs.getString(
+                        ScanSnoopService.PREF_PRIMARY_PHY,
+                        ScanSnoopService.PHY_1M
+                    ) ?: ScanSnoopService.PHY_1M
+                    service.startScanToDb(legacy, primary)
+                },
+                enabled = !(started ?: false)
+            ) {
+                Text(text = stringResource(id = R.string.start_scan))
+            }
+            Button(
+                onClick = { service.stopScan() },
+                enabled = started ?: false
+            ) {
+                Text(text = stringResource(id = R.string.stop_scan))
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 @ExperimentalPermissionsApi
-fun ScanDialog(s: () -> ScanSnoopService) {
+fun ScanPage(s: () -> ScanSnoopService) {
 
     val service by remember { derivedStateOf(s) }
     val legacy = remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     val selected = remember {
         val t = mutableStateListOf<String>()
         t.addAll(service.getPhy())
         t
     }
     val primary = remember { mutableStateOf(service.getScanPhy()) }
-    val started: Boolean? by service.serviceState().observeAsState()
     //  val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
 
     ScopePermissions {
-        Surface(
-            modifier = Modifier
-                .background(
-                    color = MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(8.dp)
-        ) {
-            Column {
-                Text(
-                    text = stringResource(id = R.string.background_scan),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Text(text = stringResource(id = R.string.scan_disclaimer))
+
+        Column {
+            Text(text = stringResource(id = R.string.scan_disclaimer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = stringResource(id = R.string.legacy_toggle))
+                Switch(checked = legacy.value, onCheckedChange = { v ->
+                    prefs.edit {
+                        putBoolean(ScanSnoopService.PREF_LEGACY, v)
+                    }
+                    legacy.value = v
+                })
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = "PHY")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = stringResource(id = R.string.legacy_toggle))
-                    Switch(checked = legacy.value, onCheckedChange = { v -> legacy.value = v })
+                    PhyButton(mode = ScanSnoopService.PHY_CODED, selected = selected)
+                    PhyButton(mode = ScanSnoopService.PHY_1M, selected = selected)
+                    PhyButton(mode = ScanSnoopService.PHY_2M, selected = selected)
                 }
-                Column(
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = "Primary PHY")
+                Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "PHY")
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        PhyButton(mode = ScanSnoopService.PHY_CODED, selected = selected)
-                        PhyButton(mode = ScanSnoopService.PHY_1M, selected = selected)
-                        PhyButton(mode = ScanSnoopService.PHY_2M, selected = selected)
-                    }
-                }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(text = "Primary PHY")
                     ScanPhyButton(
                         mode = ScanSnoopService.PHY_CODED,
                         selected = primary
@@ -236,23 +267,9 @@ fun ScanDialog(s: () -> ScanSnoopService) {
                         selected = primary
                     )
                 }
-                Row {
-                    Button(
-                        onClick = { service.startScanToDb(legacy.value, primary.value) },
-                        enabled = !(started ?: false)
-                    ) {
-                        Text(text = stringResource(id = R.string.start_scan))
-                    }
-                    Button(
-                        onClick = { service.stopScan() },
-                        enabled = started ?: false
-                    ) {
-                        Text(text = stringResource(id = R.string.stop_scan))
-                    }
-                }
             }
-
         }
+
     }
 }
 
@@ -292,31 +309,27 @@ fun BottomBar(navController: NavController) {
     BottomAppBar {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Row(horizontalArrangement = Arrangement.Start) {
-                Button(
-                    modifier = Modifier.padding(start = 5.dp, end = 5.dp),
-                    onClick = { navController.navigate(NAV_SCAN) }
-                ) {
-                    Text(text = stringResource(id = R.string.scan))
-                }
-                Button(
-                    modifier = Modifier.padding(start = 5.dp, end = 5.dp),
-                    onClick = { navController.navigate(NAV_DB) }
-                ) {
-                    Text(text = stringResource(id = R.string.database))
-                }
-
+            Button(
+                modifier = Modifier.padding(start = 5.dp, end = 5.dp),
+                onClick = { navController.navigate(NAV_PREFS) }
+            ) {
+                Text(text = stringResource(id = R.string.settings))
             }
             Button(
-                onClick = { navController.navigate(NAV_DIALOG) }
+                modifier = Modifier.padding(start = 5.dp, end = 5.dp),
+                onClick = { navController.navigate(NAV_DB) }
             ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_baseline_perm_scan_wifi_24),
-                    stringResource(id = R.string.toggle)
-                )
+                Text(text = stringResource(id = R.string.database))
             }
+            Button(
+                modifier = Modifier.padding(start = 5.dp, end = 5.dp),
+                onClick = { navController.navigate(NAV_SCAN) }
+            ) {
+                Text(text = stringResource(id = R.string.scan))
+            }
+
         }
     }
 }
@@ -330,22 +343,38 @@ fun Body(service: () -> ScanSnoopService) {
     val model = hiltViewModel<ScanViewModel>()
     Scaffold(
         content = { padding ->
-            NavHost(navController = navController, startDestination = NAV_SCAN) {
-                composable(NAV_SCAN) {
+            NavHost(navController = navController, startDestination = NAV_PREFS) {
+                composable(NAV_PREFS) {
                     model.topText.value = stringResource(id = R.string.nearby)
-                    ScopePermissions(modifier = Modifier.fillMaxSize()) {
-                        DeviceList(padding, model)
+                    ScopePermissions(
+                        modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                    ) {
+                        //  DeviceList(padding, model)
+                        ScanPage(service)
                     }
                 }
                 composable(NAV_DB) {
                     model.topText.value = stringResource(id = R.string.database)
                     EmptyTest(padding, model)
                 }
-                dialog(NAV_DIALOG) { ScanDialog(service) }
+                composable(NAV_SCAN) { DeviceList(padding = padding, model = model) }
+                dialog(NAV_DIALOG) { ScanDialog(Modifier, service) }
             }
         },
         bottomBar = { BottomBar(navController) },
-        topBar = { TopBar() }
+        topBar = { TopBar() },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate(NAV_DIALOG) }) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_baseline_perm_scan_wifi_24),
+                    contentDescription = "Start scan"
+                )
+
+            }
+        }
     )
 }
 

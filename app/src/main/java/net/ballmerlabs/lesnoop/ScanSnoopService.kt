@@ -101,7 +101,7 @@ class ScanSnoopService @Inject constructor(
         return phyList
     }
 
-    fun phyToVal(override: String? = null): Int {
+    private fun phyToVal(override: String? = null): Int {
         val phy = if (override != null)  {
             override
         } else {
@@ -167,5 +167,6 @@ class ScanSnoopService @Inject constructor(
         const val PHY_2M = "2M"
         const val PREF_PHY = "phy"
         const val PREF_PRIMARY_PHY = "primaryphy"
+        const val PREF_LEGACY = "legacy"
     }
 }
