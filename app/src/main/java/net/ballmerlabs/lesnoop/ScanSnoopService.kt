@@ -168,5 +168,6 @@ class ScanSnoopService @Inject constructor(
         const val PREF_PHY = "phy"
         const val PREF_PRIMARY_PHY = "primaryphy"
         const val PREF_LEGACY = "legacy"
+        const val PREF_CONNECT = "connect"
     }
 }

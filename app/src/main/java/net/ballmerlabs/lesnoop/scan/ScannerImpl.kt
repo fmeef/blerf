@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
+import androidx.preference.PreferenceManager
 import com.polidea.rxandroidble3.RxBleClient
 import com.polidea.rxandroidble3.RxBleDevice
 import com.polidea.rxandroidble3.RxBlePhy
@@ -136,41 +137,48 @@ class ScannerImpl @Inject constructor(
     }
 
     private fun discoverServices(device: RxBleDevice, dbid: Long? = null): Completable {
-        return device.establishConnection(false)
-            .flatMapSingle { c ->
-                val tx = service.phyToRxBle()
-                c.setPreferredPhy(tx, tx, RxBlePhyOption.PHY_OPTION_NO_PREFERRED)
-                    .ignoreElement().toSingleDefault(c)
+        return Completable.defer {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            if (prefs.getBoolean(ScanSnoopService.PREF_CONNECT, false)) {
+                device.establishConnection(false)
+                    .flatMapSingle { c ->
+                        val tx = service.phyToRxBle()
+                        c.setPreferredPhy(tx, tx, RxBlePhyOption.PHY_OPTION_NO_PREFERRED)
+                            .ignoreElement().toSingleDefault(c)
+                    }
+                    .flatMapSingle { connection ->
+                        connection.discoverServices()
+                            .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
+                            .map { s -> ServicesWithChildren(s) }
+                            .flatMapCompletable { services ->
+                                Completable.fromAction {
+                                    database.insertService(services, scanResult = dbid)
+                                }
+                                    .subscribeOn(dbScheduler)
+                            }
+                            .doOnError { err ->
+                                Log.e(
+                                    NAME,
+                                    "failed to discover services for ${device.macAddress}: $err"
+                                )
+                                err.printStackTrace()
+                            }
+                            .doOnComplete {
+                                Log.v(
+                                    NAME,
+                                    "successfully discovered services for ${device.macAddress}"
+                                )
+                            }
+                            .onErrorComplete()
+                            .toSingleDefault(connection)
+                    }
+                    .doOnError { err -> Log.e("debug", "connection error $err") }
+                    .firstOrError()
+                    .ignoreElement()
+            } else {
+                Completable.complete()
             }
-            .flatMapSingle { connection ->
-                connection.discoverServices()
-                    .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
-                    .map { s -> ServicesWithChildren(s) }
-                    .flatMapCompletable { services ->
-                        Completable.fromAction {
-                            database.insertService(services, scanResult = dbid)
-                        }
-                            .subscribeOn(dbScheduler)
-                    }
-                    .doOnError { err ->
-                        Log.e(
-                            NAME,
-                            "failed to discover services for ${device.macAddress}: $err"
-                        )
-                        err.printStackTrace()
-                    }
-                    .doOnComplete {
-                        Log.v(
-                            NAME,
-                            "successfully discovered services for ${device.macAddress}"
-                        )
-                    }
-                    .onErrorComplete()
-                    .toSingleDefault(connection)
-            }
-            .doOnError { err -> Log.e("debug", "connection error $err") }
-            .firstOrError()
-            .ignoreElement()
+        }
 
     }
 

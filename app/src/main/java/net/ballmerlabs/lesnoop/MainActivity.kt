@@ -16,10 +16,16 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.core.content.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.rxjava3.rxPreferencesDataStore
@@ -36,6 +42,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import net.ballmerlabs.lesnoop.ui.theme.BlerfTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 const val NAV_PREFS = "prefs"
@@ -197,13 +204,14 @@ fun ScanDialog(modifier: Modifier = Modifier, s: () -> ScanSnoopService) {
 }
 
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalMaterial3Api::class)
 @Composable
 @ExperimentalPermissionsApi
 fun ScanPage(s: () -> ScanSnoopService) {
 
     val service by remember { derivedStateOf(s) }
     val legacy = remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     val selected = remember {
@@ -211,13 +219,78 @@ fun ScanPage(s: () -> ScanSnoopService) {
         t.addAll(service.getPhy())
         t
     }
+    var connect by remember { mutableStateOf(prefs.getBoolean(ScanSnoopService.PREF_CONNECT, false)) }
     val primary = remember { mutableStateOf(service.getScanPhy()) }
     //  val p = context.rxPrefs.data().map { p -> p[PREF_BACKGROUND_SCAN]?: false }.subscribeAsState(initial = false)
 
     ScopePermissions {
 
         Column {
-            Text(text = stringResource(id = R.string.scan_disclaimer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val state = TooltipState()
+                val provider = object : PopupPositionProvider {
+                    override fun calculatePosition(
+                        anchorBounds: IntRect,
+                        windowSize: IntSize,
+                        layoutDirection: LayoutDirection,
+                        popupContentSize: IntSize
+                    ): IntOffset {
+                        return IntOffset(
+                            (windowSize.width - popupContentSize.width) / 4,
+                            (windowSize.height - popupContentSize.height) / 4
+                        )
+                    }
+                }
+                val scope = rememberCoroutineScope()
+                TooltipBox(
+                    positionProvider = provider,
+                    tooltip = {
+                        Surface(
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colorScheme.background,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(8.dp)
+                        ) {
+
+                            Text(
+                                text = stringResource(id = R.string.scan_disclaimer)
+                            )
+                        }
+                    }, state = state
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = stringResource(id = R.string.connect_mode))
+                            IconButton(
+                                onClick = {
+                                    scope.launch { state.show() }
+                                },
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.baseline_info_24),
+                                    contentDescription = "Info",
+                                )
+                            }
+                        }
+                        Switch(checked = connect, onCheckedChange = { v ->
+                            connect = v
+                            prefs.edit {
+                                putBoolean(ScanSnoopService.PREF_CONNECT, v)
+                            }
+                        })
+                    }
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
