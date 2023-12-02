@@ -4,11 +4,15 @@ import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.runtime.*
@@ -41,8 +45,10 @@ import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberPermissionState
 import net.ballmerlabs.lesnoop.ui.theme.BlerfTheme
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.disposables.CompositeDisposable
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import net.ballmerlabs.lesnoop.db.OuiParser
 import javax.inject.Inject
 
 const val NAV_PREFS = "prefs"
@@ -66,10 +72,19 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var scanSnoopService: ScanSnoopService
 
+    @Inject
+    lateinit var ouiParser: OuiParser
+
+    private val disposable = CompositeDisposable()
 
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val disp = ouiParser.oui.subscribe(
+            { o -> Log.v("debug", "cached oui requested with len ${o.size}") },
+            { e -> Log.e("debug", "failed to refresh oui $e") }
+        )
+        disposable.add(disp)
         setContent {
             BlerfTheme {
                 Body {
@@ -77,6 +92,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        disposable.dispose()
     }
 }
 
@@ -419,11 +439,13 @@ fun Body(service: () -> ScanSnoopService) {
             NavHost(navController = navController, startDestination = NAV_PREFS) {
                 composable(NAV_PREFS) {
                     model.topText.value = stringResource(id = R.string.settings)
+                    val scrollState = ScrollState(0)
                     ScopePermissions(
                         modifier =
                         Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth()
                             .padding(padding)
+                            .verticalScroll(scrollState)
                     ) {
                         //  DeviceList(padding, model)
                         ScanPage(service)
