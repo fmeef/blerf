@@ -192,7 +192,7 @@ fun ScanDialog(modifier: Modifier = Modifier, s: () -> ScanSnoopService) {
         PreferenceManager.getDefaultSharedPreferences(context)
     }
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .background(
                 color = MaterialTheme.colorScheme.background,
                 shape = RoundedCornerShape(8.dp)

@@ -29,7 +29,7 @@ import javax.inject.Singleton
 
 @Singleton
 class ScanSnoopService @Inject constructor(
-    val scanBuilder: ScanSubcomponent.Builder,
+    private val scanBuilder: ScanSubcomponent.Builder,
     @ApplicationContext val applicationContext: Context
 ) {
     private lateinit var mService: BackgroundScanService
