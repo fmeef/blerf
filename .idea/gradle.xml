@@ -4,39 +4,11 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
-        <compositeConfiguration>
-          <compositeBuild compositeDefinitionSource="SCRIPT">
-            <builds>
-              <build path="$PROJECT_DIR$/RxAndroidBle" name="rxandroidble-parent">
-                <projects>
-                  <project path="$PROJECT_DIR$/RxAndroidBle" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/dagger-compiler-shadow" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/dagger-library-shadow" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/mockrxandroidble" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/mockrxandroidble3" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/rxandroidble" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/rxandroidble3" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/sample" />
-                  <project path="$PROJECT_DIR$/RxAndroidBle/sample-kotlin" />
-                </projects>
-              </build>
-            </builds>
-          </compositeBuild>
-        </compositeConfiguration>
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/RxAndroidBle" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/dagger-compiler-shadow" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/dagger-library-shadow" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/mockrxandroidble" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/mockrxandroidble3" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/rxandroidble" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/rxandroidble3" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/sample" />
-            <option value="$PROJECT_DIR$/RxAndroidBle/sample-kotlin" />
             <option value="$PROJECT_DIR$/app" />
           </set>
         </option>

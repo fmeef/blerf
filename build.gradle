@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        compose_version = '1.6.0-beta01'
+        compose_version = '1.6.0'
         agp_version = '7.4.2'
         agp_version1 = '7.2.1'
         agp_version2 = '4.2.2'

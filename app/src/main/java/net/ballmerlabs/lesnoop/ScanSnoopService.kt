@@ -86,17 +86,18 @@ class ScanSnoopService @Inject constructor(
         return phyval
     }
 
-    fun phyToRxBle(override: List<String>? = null): EnumSet<RxBlePhy> {
+    fun phyToRxBle(override: List<String>? = null): Set<RxBlePhy> {
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val phy = override ?: (prefs.getStringSet(PREF_PHY, mutableSetOf()) ?: mutableSetOf())
-        val phyList = EnumSet.allOf(RxBlePhy::class.java)
+        val phyList = mutableSetOf<RxBlePhy>()
         for (p in phy) {
             val v = when(p) {
                 PHY_1M -> RxBlePhy.PHY_1M
                 PHY_2M -> RxBlePhy.PHY_2M
                 PHY_CODED -> RxBlePhy.PHY_CODED
-                else -> RxBlePhy.PHY_UNKNOWN
+                else -> RxBlePhy.PHY_2M
             }
+            phyList.add(v)
         }
         return phyList
     }

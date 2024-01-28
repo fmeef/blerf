@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <bytecodeTargetLevel target="17" />
+    <bytecodeTargetLevel target="17">
+      <module name="rxandroidble-parent.dagger-compiler-shadow" target="1.8" />
+      <module name="rxandroidble-parent.dagger-compiler-shadow.main" target="1.8" />
+      <module name="rxandroidble-parent.dagger-compiler-shadow.test" target="1.8" />
+      <module name="rxandroidble-parent.dagger-library-shadow" target="1.8" />
+      <module name="rxandroidble-parent.dagger-library-shadow.main" target="1.8" />
+      <module name="rxandroidble-parent.dagger-library-shadow.test" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

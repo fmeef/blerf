@@ -15,11 +15,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Blerf"
 include ':app'
-
-includeBuild('RxAndroidBle') {
-    dependencySubstitution {
-        substitute module('com.polidea.rxandroidble2:rxandroidble') using project(':rxandroidble')
-        substitute module('com.polidea.rxandroidble3:rxandroidble') using project(':rxandroidble3')
-        substitute module('com.polidea.rxandroidble3:mockclient') using project(':mockrxandroidble')
-    }
-}
