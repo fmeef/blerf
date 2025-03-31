@@ -1,5 +1,6 @@
 package net.ballmerlabs.lesnoop.scan
 
+import android.bluetooth.BluetoothDevice
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -11,9 +12,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.preference.PreferenceManager
 import com.polidea.rxandroidble3.RxBleClient
+import com.polidea.rxandroidble3.RxBleConnection
 import com.polidea.rxandroidble3.RxBleDevice
 import com.polidea.rxandroidble3.RxBlePhy
 import com.polidea.rxandroidble3.RxBlePhyOption
+import com.polidea.rxandroidble3.exceptions.BleDisconnectedException
 import com.polidea.rxandroidble3.exceptions.BleScanException
 import com.polidea.rxandroidble3.scan.IsConnectable
 import com.polidea.rxandroidble3.scan.ScanFilter
@@ -24,6 +27,11 @@ import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import net.ballmerlabs.lesnoop.*
+import net.ballmerlabs.lesnoop.ScanSnoopService.Companion.PHY_1M
+import net.ballmerlabs.lesnoop.ScanSnoopService.Companion.PHY_2M
+import net.ballmerlabs.lesnoop.ScanSnoopService.Companion.PHY_CODED
+import net.ballmerlabs.lesnoop.ScanSnoopService.Companion.PREF_PHY
+import net.ballmerlabs.lesnoop.ScanSnoopService.Companion.PREF_PRIMARY_PHY
 import net.ballmerlabs.lesnoop.db.ScanResultDao
 import net.ballmerlabs.lesnoop.db.entity.DbScanResult
 import net.ballmerlabs.lesnoop.db.entity.ServicesWithChildren
@@ -58,7 +66,11 @@ class ScannerImpl @Inject constructor(
     private val dbScheduler: Scheduler,
     private val context: Context,
     private val locationTagger: LocationTagger,
-    private val service: ScanSnoopService
+    private val service: ScanSnoopService,
+    @Named(Module.CONNECT_SCHEDULER)
+    private val connectScheduler: Scheduler,
+    @Named(Module.TIMEOUT_SCHEDULER)
+    private val timeoutScheduler: Scheduler
 ) : Scanner {
     private val disp = CompositeDisposable()
     private lateinit var mService: BackgroundScanService
@@ -66,7 +78,6 @@ class ScannerImpl @Inject constructor(
 
     /** Defines callbacks for service binding, passed to bindService().  */
     private val connection = object : ServiceConnection {
-
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             val binder = service as BackgroundScanService.LocalBinder
@@ -119,9 +130,12 @@ class ScannerImpl @Inject constructor(
     }
 
     override fun insertResult(scanResult: ScanResult): Single<Pair<Long, ScanResult>> {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val phy = prefs.getString(PREF_PRIMARY_PHY, null)
+        val phyVal = service.phyToVal(phy)
         return locationTagger.tagLocation(scanResult)
             .onErrorReturn {
-                DbScanResult(scanResult)
+                DbScanResult(scanResult, phy = phyVal)
             }
             .defaultIfEmpty(DbScanResult(scanResult = scanResult))
             .flatMap { result ->
@@ -136,42 +150,125 @@ class ScannerImpl @Inject constructor(
             .map { r -> Pair(r, scanResult) }
     }
 
+    private fun <T : Any> smartRetry(connection: Observable<T>, times: Int): Observable<T> {
+        return connection
+            .subscribeOn(connectScheduler)
+            .retryWhen { errs: Observable<Throwable> ->
+            errs.zipWith(
+                Observable.range(
+                    1,
+                    times
+                )
+            ) { err: Throwable, i: Int -> err }
+                .flatMapSingle { err ->
+                    when (err) {
+                        is BleDisconnectedException -> {
+                            when (err.state) {
+                                133 -> Single.timer(
+                                    250,
+                                    TimeUnit.MILLISECONDS,
+                                    connectScheduler
+                                ) // Unknown gatt error
+                                257 -> Single.timer(
+                                    10,
+                                    TimeUnit.SECONDS,
+                                    connectScheduler
+                                ) // Weird connect throttling
+                                else -> Single.error(err)
+                            }
+                        }
+
+                        else -> Single.error(err)
+                    }
+                }
+        }
+    }
+
+    private fun <T : Any> smartRetry(connection: Single<T>, times: Int): Single<T> {
+        return connection.retryWhen { errs: Flowable<Throwable> ->
+            errs.zipWith(
+                Flowable.range(
+                    1,
+                    times
+                )
+            ) { err: Throwable, i: Int -> err }
+                .flatMapSingle { err ->
+                    when (err) {
+                        is BleDisconnectedException -> {
+                            when (err.state) {
+                                133 -> Single.timer(
+                                    250,
+                                    TimeUnit.MILLISECONDS,
+                                    timeoutScheduler
+                                ) // Unknown gatt error
+                                22 -> Single.timer(
+                                    250,
+                                    TimeUnit.MILLISECONDS,
+                                    timeoutScheduler
+                                ) // GATT_CONN_TERMINATE_LOCAL_HOST
+                                257 -> Single.timer(
+                                    20,
+                                    TimeUnit.SECONDS,
+                                    timeoutScheduler
+                                ) // Weird connect throttling
+                                else -> Single.error(err)
+                            }
+                        }
+
+                        else -> Single.error(err)
+                    }
+                }
+        }
+    }
+
     private fun discoverServices(device: RxBleDevice, dbid: Long? = null): Completable {
         return Completable.defer {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             if (prefs.getBoolean(ScanSnoopService.PREF_CONNECT, false)) {
-                device.establishConnection(false)
-                    .flatMapSingle { c ->
+                smartRetry(device.establishConnection(false), 3)
+                    .concatMapSingle { c ->
                         val tx = service.phyToRxBle()
-                        c.setPreferredPhy(tx, tx, RxBlePhyOption.PHY_OPTION_NO_PREFERRED)
-                            .ignoreElement().toSingleDefault(c)
-                    }
-                    .flatMapSingle { connection ->
-                        connection.discoverServices()
-                            .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
-                            .map { s -> ServicesWithChildren(s) }
-                            .flatMapCompletable { services ->
-                                Completable.fromAction {
-                                    database.insertService(services, scanResult = dbid)
+                        if (tx.isNotEmpty()) {
+                            smartRetry(c.setPreferredPhy(tx, tx, RxBlePhyOption.PHY_OPTION_NO_PREFERRED), 2)
+                                .flatMapObservable { phy ->
+                                    smartRetry(c.discoverServices(), 3)
+                                        .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
+                                        .map { s -> ServicesWithChildren(s, phy = phy) }
                                 }
-                                    .subscribeOn(dbScheduler)
-                            }
-                            .doOnError { err ->
-                                Log.e(
-                                    NAME,
-                                    "failed to discover services for ${device.macAddress}: $err"
-                                )
-                                err.printStackTrace()
-                            }
-                            .doOnComplete {
-                                Log.v(
-                                    NAME,
-                                    "successfully discovered services for ${device.macAddress}"
-                                )
-                            }
-                            .onErrorComplete()
-                            .toSingleDefault(connection)
+                                .onErrorResumeNext{
+                                    smartRetry(c.discoverServices(), 3)
+                                    .flatMapObservable { s -> Observable.fromIterable(s.bluetoothGattServices) }
+                                    .map { s -> ServicesWithChildren(s, phy = null) }
+                                }
+                                .flatMapCompletable { services ->
+                                    database.insertService(services, scanResult = dbid)
+                                        .subscribeOn(dbScheduler)
+                                }
+                                .doOnError { err ->
+                                    Log.e(
+                                        NAME,
+                                        "failed to discover services for ${device.macAddress}: $err"
+                                    )
+                                }
+                                .doOnComplete {
+                                    Log.v(
+                                        NAME,
+                                        "successfully discovered services for ${device.macAddress}"
+                                    )
+                                }
+                                .onErrorComplete()
+                                .toSingleDefault(c)
+                                .doOnError { err ->
+                                    Log.w(
+                                        NAME,
+                                        "failed to set new phy $tx, continuing without: $err"
+                                    )
+                                }
+                        } else {
+                            Single.just(c)
+                        }
                     }
+
                     .doOnError { err -> Log.e("debug", "connection error $err") }
                     .firstOrError()
                     .ignoreElement()

@@ -104,9 +104,10 @@ class UuidTypeConverter {
         ServiceScanResultMapping::class
                ],
     exportSchema = true,
-    version = 6,
+    version = 7,
     autoMigrations = [
-        AutoMigration(from = 1, to = 2)
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 6, 7)
        // AutoMigration(from = 5, to = 6, spec = ScanDatabase.AutoMigrationMappingRename::class)
     ]
 )

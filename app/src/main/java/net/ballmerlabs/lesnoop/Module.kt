@@ -30,12 +30,32 @@ class Module {
         const val DB_PATH = "dbpath"
         const val EXECUTOR_COMPUTE = "computeexec"
         const val GLOBAL_SCAN = "globalscan"
+        const val CONNECT_SCHEDULER = "connect"
+        const val TIMEOUT_SCHEDULER = "timeout"
     }
 
     @Provides
     @Singleton
     @Named(DB_SCHEDULER)
     fun provideDbSceduler(): Scheduler {
+        return RxJavaPlugins.createIoScheduler { r ->
+            Thread(r)
+        }
+    }
+
+    @Provides
+    @Singleton
+    @Named(CONNECT_SCHEDULER)
+    fun provideConnectScheduler(): Scheduler {
+        return RxJavaPlugins.createSingleScheduler { r ->
+            Thread(r)
+        }
+    }
+
+    @Provides
+    @Singleton
+    @Named(TIMEOUT_SCHEDULER)
+    fun provideTimeoutScheduler(): Scheduler {
         return RxJavaPlugins.createIoScheduler { r ->
             Thread(r)
         }

@@ -1,9 +1,11 @@
 package net.ballmerlabs.lesnoop.db.entity
 
 import android.location.Location
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.polidea.rxandroidble3.PhyPair
 
 @Entity(
     tableName = "scan_results"
@@ -14,13 +16,16 @@ data class DbScanResult(
     val macAddress: String,
     val name: String?,
     val rssi: Int,
+    @ColumnInfo(defaultValue = "null")
+    val scanPhy: Int?,
     val scanRecord: ByteArray,
     @Embedded val location: DbLocation? = null
 ) {
-    constructor(scanResult: com.polidea.rxandroidble3.scan.ScanResult, location: Location? = null): this(
+    constructor(scanResult: com.polidea.rxandroidble3.scan.ScanResult, location: Location? = null, phy: Int? = null): this(
         macAddress = scanResult.bleDevice.macAddress,
         name = scanResult.bleDevice.name,
         rssi = scanResult.rssi,
+        scanPhy = phy,
         scanRecord = scanResult.scanRecord.bytes,
         location = if (location != null) DbLocation(location) else null
     )

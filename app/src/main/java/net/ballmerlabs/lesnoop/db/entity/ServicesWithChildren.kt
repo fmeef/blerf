@@ -3,6 +3,7 @@ package net.ballmerlabs.lesnoop.db.entity
 import android.bluetooth.BluetoothGattService
 import androidx.room.Embedded
 import androidx.room.Relation
+import com.polidea.rxandroidble3.PhyPair
 
 data class ServicesWithChildren(
     @Embedded
@@ -15,8 +16,8 @@ data class ServicesWithChildren(
     )
     val characteristics: List<CharacteristicWithDescriptors>
 ) {
-    constructor(service: BluetoothGattService): this(
-        discoveredService = DiscoveredService(service),
+    constructor(service: BluetoothGattService, phy: PhyPair? = null): this(
+        discoveredService = DiscoveredService(service, phy = phy),
         characteristics = service.characteristics.map { c -> CharacteristicWithDescriptors(c) }
     )
 }

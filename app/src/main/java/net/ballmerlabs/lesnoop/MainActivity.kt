@@ -187,10 +187,6 @@ fun ScopePermissions(
 fun ScanDialog(modifier: Modifier = Modifier, s: () -> ScanSnoopService) {
     val service by remember { derivedStateOf(s) }
     val started: Boolean? by service.serviceState().observeAsState()
-    val context = LocalContext.current
-    val prefs = remember {
-        PreferenceManager.getDefaultSharedPreferences(context)
-    }
     Surface(
         modifier = modifier
             .background(
@@ -202,12 +198,7 @@ fun ScanDialog(modifier: Modifier = Modifier, s: () -> ScanSnoopService) {
         Row {
             Button(
                 onClick = {
-                    val legacy = prefs.getBoolean(ScanSnoopService.PREF_LEGACY, false)
-                    val primary = prefs.getString(
-                        ScanSnoopService.PREF_PRIMARY_PHY,
-                        ScanSnoopService.PHY_1M
-                    ) ?: ScanSnoopService.PHY_1M
-                    service.startScanToDb(legacy, primary)
+                    service.startScanToDb()
                 },
                 enabled = !(started ?: false)
             ) {
@@ -224,7 +215,7 @@ fun ScanDialog(modifier: Modifier = Modifier, s: () -> ScanSnoopService) {
 }
 
 
-@OptIn(ExperimentalCoroutinesApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @ExperimentalPermissionsApi
 fun ScanPage(s: () -> ScanSnoopService) {

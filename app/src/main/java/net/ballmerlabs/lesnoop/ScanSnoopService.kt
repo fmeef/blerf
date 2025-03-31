@@ -15,6 +15,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.preference.PreferenceManager
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.polidea.rxandroidble3.RxBlePhy
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,6 +26,7 @@ import net.ballmerlabs.lesnoop.scan.Scanner
 import java.lang.IllegalArgumentException
 import java.util.Collections
 import java.util.EnumSet
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,6 +55,13 @@ class ScanSnoopService @Inject constructor(
     private val scan = AtomicReference<Scanner?>(null)
 
     private fun scanBackground(intent: Intent) {
+        /*
+        val request = PeriodicWorkRequestBuilder<ResetScanWorker>(15.toLong(), TimeUnit.MINUTES)
+            .setId(SCAN_RESET_WORKER_ID)
+            .build()
+        WorkManager.getInstance(applicationContext)
+            .enqueueUniquePeriodicWork(SCAN_RESET_WORKER_ID.toString(), ExistingPeriodicWorkPolicy.UPDATE, request)
+         */
         applicationContext.applicationContext.startService(intent)
         applicationContext.applicationContext.bindService(intent, connection, 0)
     }
@@ -102,7 +113,7 @@ class ScanSnoopService @Inject constructor(
         return phyList
     }
 
-    private fun phyToVal(override: String? = null): Int {
+    fun phyToVal(override: String? = null): Int {
         val phy = if (override != null)  {
             override
         } else {
@@ -117,14 +128,25 @@ class ScanSnoopService @Inject constructor(
         }
     }
 
-    fun startScanToDb(legacy: Boolean, phy: String? = null) {
+    fun getStartIntent(): Intent {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        val legacy = prefs.getBoolean(PREF_LEGACY, false)
+        val phy = prefs.getString(
+            PREF_PRIMARY_PHY,
+            PHY_1M
+        ) ?: PHY_1M
+
+        val phyVal = phyToVal(phy)
+        return Intent(applicationContext, BackgroundScanService::class.java)
+            .apply {
+                putExtra(BackgroundScanService.EXTRA_LEGACY_MODE, legacy)
+                putExtra(BackgroundScanService.EXTRA_PHY, phyVal)
+            }
+    }
+
+    fun startScanToDb() {
         try {
-            val phyVal = phyToVal(phy)
-            val intent = Intent(applicationContext, BackgroundScanService::class.java)
-                .apply {
-                    putExtra(BackgroundScanService.EXTRA_LEGACY_MODE, legacy)
-                    putExtra(BackgroundScanService.EXTRA_PHY, phyVal)
-                }
+            val intent = getStartIntent()
             val scanner = applicationContext.getScan(scanBuilder)
             val old = scan.getAndSet(scanner)
             stopScanBackground()

@@ -13,6 +13,7 @@ import com.polidea.rxandroidble3.scan.ScanResult
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Scheduler
 import net.ballmerlabs.lesnoop.scan.BroadcastReceiverState
 import net.ballmerlabs.lesnoop.scan.LocationTagger
 import net.ballmerlabs.lesnoop.scan.Scanner
@@ -20,10 +21,10 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Named
 
-private const val SCAN_REQUEST_CODE = 44
+const val SCAN_REQUEST_CODE = 44
 
 @AndroidEntryPoint
-class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
+class ScanBroadcastReceiver : BroadcastReceiver() {
     @Inject
     lateinit var client: RxBleClient
 
@@ -42,25 +43,13 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
     @Named(Module.GLOBAL_SCAN)
     lateinit var scanner: Scanner
 
-    fun newPendingIntent(): PendingIntent =
-        Intent(context, ScanBroadcastReceiver::class.java).let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                PendingIntent.getBroadcast(
-                    context,
-                    SCAN_REQUEST_CODE,
-                    it,
-                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            } else {
-                PendingIntent.getBroadcast(
-                    context,
-                    SCAN_REQUEST_CODE,
-                    it,
-                    PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            }
-        }
+    @Inject
+    @Named(Module.CONNECT_SCHEDULER)
+    lateinit var connectScheduler: Scheduler
 
+    @Inject
+    @Named(Module.TIMEOUT_SCHEDULER)
+    lateinit var timeoutScheduler: Scheduler
 
     override fun onReceive(context: Context, intent: Intent) {
         try {
@@ -73,13 +62,14 @@ class ScanBroadcastReceiver @Inject constructor() : BroadcastReceiver() {
                     list.add(v)
                     list
                 }.timeout(30, TimeUnit.SECONDS)
-                    .flatMapCompletable { dbIds ->
+                    .concatMapCompletable { dbIds ->
                         Observable.fromIterable(dbIds)
-                            .delay(1, TimeUnit.SECONDS)
+                            .delay(1, TimeUnit.SECONDS, timeoutScheduler )
                             .concatMapCompletable { scanResult ->
-                            scanner.discoverServices(scanResult.second, scanResult.first)
-                                .onErrorComplete()
-                        }
+                                scanner.discoverServices(scanResult.second, scanResult.first)
+                                    .timeout(25, TimeUnit.SECONDS,  timeoutScheduler)
+                                    .onErrorComplete()
+                            }
 
                     }
                     .doOnComplete { Log.w("debug", "connect complete") }

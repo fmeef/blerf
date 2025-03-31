@@ -14,6 +14,5 @@ interface Scanner : Disposable {
     fun stopScanBackground()
     fun insertResult(scanResult: ScanResult): Single<Pair<Long, ScanResult>>
     fun discoverServices(scanResult: ScanResult, dbid: Long? = null): Completable
-
     fun serviceState(): LiveData<Boolean>
 }

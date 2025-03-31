@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.location.Criteria
 import android.location.LocationManager
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.polidea.rxandroidble3.scan.ScanResult
@@ -19,6 +20,10 @@ import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
 
+fun Context.checkAirplaneMode(): Boolean {
+    return Settings.Global.getInt(contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0
+}
+
 @Singleton
 class LocationTagger @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -31,7 +36,11 @@ class LocationTagger @Inject constructor(
                 accuracy = Criteria.ACCURACY_FINE
                 isCostAllowed = false
             }
-            val provider = locationService.getBestProvider(criteria, true)
+            val provider = if(context.checkAirplaneMode())
+                    LocationManager.GPS_PROVIDER
+                else
+                    locationService.getBestProvider(criteria, true)
+
             if (provider != null && locationService.isProviderEnabled(provider)) {
                 Maybe.create { m ->
                     if (ActivityCompat.checkSelfPermission(
