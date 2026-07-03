@@ -1,12 +1,14 @@
 package net.ballmerlabs.lesnoop.db
 
+import android.content.Context
+import android.net.Uri
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Room
 import androidx.room.Transaction
 import androidx.room.Update
-import com.polidea.rxandroidble3.PhyPair
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Maybe
 import io.reactivex.rxjava3.core.Observable
@@ -18,6 +20,7 @@ import net.ballmerlabs.lesnoop.db.entity.DiscoveredService
 import net.ballmerlabs.lesnoop.db.entity.Metrics
 import net.ballmerlabs.lesnoop.db.entity.ServiceScanResultMapping
 import net.ballmerlabs.lesnoop.db.entity.ServicesWithChildren
+import java.util.UUID
 
 @Dao
 interface ScanResultDao {
@@ -32,7 +35,7 @@ interface ScanResultDao {
     @Query("SELECT * FROM scan_results")
     fun getScanResults(): Observable<List<DbScanResult>>
 
-    @Query("SELECT macAddress FROM scan_results")
+    @Query("SELECT DISTINCT macAddress FROM scan_results")
     fun getMacs(): Observable<List<String>>
 
 
@@ -61,6 +64,9 @@ interface ScanResultDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertDescriptors(descriptors: List<Descriptor>): Completable
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertDescriptor(descriptors: Descriptor): Completable
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertDiscoveredService(service: DiscoveredService): Single<Long>
@@ -103,7 +109,62 @@ interface ScanResultDao {
     fun incrementConnected(): Completable
 
     @Query(
-        "UPDATE OR IGNORE metrics SET error = error+1 WHERE run = (" + "SELECT run FROM metrics ORDER BY date DESC LIMIT 1)"
+        "UPDATE OR IGNORE metrics SET error = error+1, error_text = :text WHERE run = (" + "SELECT run FROM metrics ORDER BY date DESC LIMIT 1)"
     )
-    fun incrementError(): Completable
+    fun incrementError(text: String): Completable
+
+    @Query(
+        "SELECT * FROM discovered_services INNER JOIN scan_service_mapping ON uid =  scanResult" +
+                " WHERE scanResult = :id"
+    )
+    fun getServicesForResult(id: Long): Single<List<DiscoveredService>>
+
+    @Query("SELECT * FROM characteristics WHERE parentService = :service")
+    fun getCharacteristicsForService(service: UUID): Single<List<Characteristic>>
+
+    @Query("SELECT * FROM descriptors WHERE parentCharacteristic = :char")
+    fun getDescriptorsForCharacteristic(char: Long): Single<List<Descriptor>>
+
+    fun mergeUri(uri: Uri, ctx: Context): Completable {
+        val db = Room.databaseBuilder(ctx, ScanDatabase::class.java, "Import")
+            .createFromInputStream({ ctx.contentResolver.openInputStream(uri) })
+            .addMigrations(MIGATION_2_3)
+            .build()
+        val altDao = db.scanResultsDao()
+        return altDao.getScanResults().firstOrError()
+            .flatMapObservable { results -> Observable.fromIterable(results) }
+            .flatMapCompletable { result ->
+                val uid = result.uid!!
+                result.uid = null
+                insertScanResult(result).flatMapCompletable { id ->
+                    altDao.getServicesForResult(uid).flatMapCompletable { services ->
+                        Observable.fromIterable(services)
+                            .flatMapCompletable { service ->
+                                val mapping = ServiceScanResultMapping(
+                                    service = service.uid,
+                                    scanResult = id
+                                )
+                                insertMapping(mapping).ignoreElement()
+                                    .andThen(altDao.getCharacteristicsForService(service.uid))
+                                    .flatMapCompletable { chars ->
+                                        Observable.fromIterable(chars)
+                                            .flatMapCompletable { ch ->
+                                                insertCharacteristic(ch).flatMapCompletable { chid ->
+                                                    altDao.getDescriptorsForCharacteristic(ch.uid!!)
+                                                        .flatMapCompletable { des ->
+                                                            Observable.fromIterable(des)
+                                                                .flatMapCompletable { d ->
+                                                                    d.parentCharacteristic =
+                                                                        chid
+                                                                    insertDescriptor(d)
+                                                                }
+                                                        }
+                                                }
+                                            }
+                                    }
+                            }
+                    }
+                }
+            }
+    }
 }

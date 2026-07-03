@@ -17,7 +17,7 @@ import java.util.Date
 )
 data class DbScanResult(
     @PrimaryKey(autoGenerate = true)
-    val uid: Long? = null,
+    var uid: Long? = null,
     val macAddress: String,
     val name: String?,
     val rssi: Int,

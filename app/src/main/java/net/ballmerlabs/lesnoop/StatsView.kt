@@ -5,23 +5,32 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rxjava3.subscribeAsState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,6 +45,7 @@ fun DbChartView(modifier: Modifier = Modifier, showButtons: Boolean = true) {
     val model: ScanViewModel = hiltViewModel()
     val ouis by model.getTopOuis(8).subscribeAsState(mapOf())
     val context = LocalContext.current
+    var disp by remember { mutableStateOf<Disposable?>(null) }
     val scope = rememberCoroutineScope()
     val toastText = stringResource(R.string.invalid_file_path)
     val launcher = rememberLauncherForActivityResult(
@@ -59,6 +69,18 @@ fun DbChartView(modifier: Modifier = Modifier, showButtons: Boolean = true) {
         }
     }
 
+    val openLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        if (uri != null)
+            disp = model.scanResultDao.mergeUri(uri, context)
+                .doFinally { disp = null }
+                .subscribe(
+                { Timber.v("imported successfully") },
+                { err-> Timber.e("failed to import: $err") }
+            )
+    }
+
     val configuration = LocalConfiguration.current
 
     Column(modifier = modifier) {
@@ -68,11 +90,24 @@ fun DbChartView(modifier: Modifier = Modifier, showButtons: Boolean = true) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             ScanResultsCount(model = model)
-            if (showButtons) {
-                Button(onClick = {
-                    launcher.launch("output.sqlite")
-                }) {
-                    Text(text = stringResource(id = R.string.export))
+            if (showButtons && disp == null) {
+                Column {
+                    Button(onClick = {
+                        launcher.launch("output.sqlite")
+                    }) {
+                        Text(text = stringResource(id = R.string.export))
+                    }
+
+                    Button(onClick = {
+                        openLauncher.launch(
+                            arrayOf(
+                                "application/x-sqlite3",
+                                "application/octet-stream"
+                            )
+                        )
+                    }) {
+                        Text(text = "Import")
+                    }
                 }
             }
         }
@@ -139,12 +174,17 @@ fun MetricsView(modifier: Modifier = Modifier, showButtons: Boolean = true) {
         verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
 
-        Column {
+        val scrollState = rememberScrollState()
+
+        Column(modifier = Modifier
+            .height(180.dp)
+            .verticalScroll(scrollState)) {
             Text("new: ${metrics?.newCount}")
             Text("already seen: ${metrics?.oldCount}")
             Text("connected: ${metrics?.connected}")
-            Text("error: ${metrics?.error}")
             Text("inflight: $connected")
+            Text("error: ${metrics?.error}")
+            Text("errorStr: ${metrics?.errorText}")
         }
 
         LocationView()

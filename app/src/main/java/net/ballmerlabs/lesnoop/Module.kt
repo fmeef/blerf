@@ -127,7 +127,6 @@ abstract class Module {
         fun providesDatabase(@ApplicationContext ctx: Context): ScanDatabase {
             return Room.databaseBuilder(ctx, ScanDatabase::class.java, "ScanDatabase")
                 .addMigrations(MIGATION_2_3)
-                .fallbackToDestructiveMigration()
                 .build()
         }
 
@@ -174,7 +173,7 @@ abstract class Module {
         @Singleton
         @Named(DB_PATH)
         fun providesDatabasePath(database: ScanDatabase): File {
-            return File(database.openHelper.readableDatabase.path)
+            return File(database.openHelper.readableDatabase.path!!)
         }
     }
 }
