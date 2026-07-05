@@ -406,7 +406,7 @@ class ScannerImpl @Inject constructor(
                             discoverServices(
                                 scanResult.second.bleDevice,
                                 scanResult.first
-                            ).andThen(database.setConnected(mac).subscribeOn(dbScheduler))
+                            )
                                 .toSingleDefault(true)
                         } else {
                             Timber.v("skipping mac $mac, already connected")
@@ -497,6 +497,7 @@ class ScannerImpl @Inject constructor(
                         .flatMapCompletable { services ->
                             Timber.v("got services: $services")
                             insertService(services, scanResult = dbid)
+                                .andThen( database.setConnected(scanResult.macAddress).subscribeOn(dbScheduler))
                                 .subscribeOn(dbScheduler)
                         }
                         .andThen(

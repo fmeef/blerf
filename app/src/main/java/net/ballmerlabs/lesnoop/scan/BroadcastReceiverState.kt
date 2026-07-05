@@ -47,7 +47,6 @@ class BroadcastReceiverState @Inject constructor(
     fun insertWithoutConnecting(result: ScanResult, legacy: Boolean) {
         Timber.tag("debug").v("insertWithoutConnecting ${result.bleDevice.macAddress}")
         insertQueue.accept(
-            result.bleDevice,
             scanner.createScanner().insertResult(result, legacy)
                 .doFinally { batch.remove(result.bleDevice.macAddress) }
                 .ignoreElement())
@@ -86,19 +85,19 @@ class BroadcastReceiverState @Inject constructor(
             Timber.v("device isConnectable ${result.isConnectable} ${result.callbackType}")
             return when (result.isConnectable) {
                 IsConnectable.CONNECTABLE -> {
-                    insertWithoutConnecting(result, legacy)
                     queue.accept(
-                        result.bleDevice,
-                        s.connectWithDbCache(result, legacy)
+                        result,
+                        s.connectWithDbCache(result, legacy),
+                        legacy
                     )
                 }
 
                 IsConnectable.NOT_CONNECTABLE -> insertWithoutConnecting(result, legacy)
                 IsConnectable.LEGACY_UNKNOWN -> {
                     if (legacy) {
-                        insertWithoutConnecting(result, true)
                         queue.accept(
-                            result.bleDevice, s.connectWithDbCache(result, true)
+                            result, s.connectWithDbCache(result, true),
+                            true
                         )
                     } else {
                         insertWithoutConnecting(result, false)
