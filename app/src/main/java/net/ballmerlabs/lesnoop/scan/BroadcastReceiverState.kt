@@ -24,7 +24,8 @@ class BroadcastReceiverState @Inject constructor(
     val prefs: SharedPreferences,
     val queue: ConnectQueue,
     val insertQueue: InsertQueue,
-    val scanner: ScannerFactory
+    val scanner: ScannerFactory,
+    val ignore: ConnectIgnoreHelper
 ) {
     private val batch = ConcurrentHashMap<String, Completable>()
 
@@ -53,6 +54,10 @@ class BroadcastReceiverState @Inject constructor(
     }
 
     fun executeBatch(result: ScanResult, legacy: Boolean) {
+        if (ignore.shouldIgnore(result.bleDevice.macAddress)) {
+            Timber.v("ignoring device ${result.bleDevice.macAddress}")
+            return
+        }
         val s = scanner.createScanner()
 
 

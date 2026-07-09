@@ -94,6 +94,7 @@ class ScannerImpl @Inject constructor(
     val bluetoothManager: BluetoothManager,
     val finalizer: ScanSubcomponentFinalizer,
     val prefs: SharedPreferences,
+    val ignoreHelper: ConnectIgnoreHelper
 ) : Scanner {
     private val disp = CompositeDisposable()
     private val scanRunning = AtomicBoolean(false)
@@ -137,6 +138,7 @@ class ScannerImpl @Inject constructor(
         }
         scanner?.stopScan(pendingIntent)
         scanner?.stopScan(legacyIntent)
+        ignoreHelper.dump()
     }
 
     override fun lockScan(lock: Boolean) {
@@ -147,6 +149,7 @@ class ScannerImpl @Inject constructor(
         if (scanLocked)
             return
         if (scanRunning.get()) {
+            ignoreHelper.dump()
             val pendingIntent =
                 newPendingIntent(applicationContext, NonLegacyBroadcastReceiver::class.java)
             val legacyIntent =
@@ -186,7 +189,7 @@ class ScannerImpl @Inject constructor(
                         if (reportDelayEnabled)
                             setReportDelay(reportDelay)
                     }.setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
-                    .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
+                    .setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
                     .setCallbackType(android.bluetooth.le.ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
                     .build()
             if (legacy) {
@@ -202,7 +205,7 @@ class ScannerImpl @Inject constructor(
                             if (reportDelayEnabled)
                                 setReportDelay(reportDelay)
                         }.setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
-                        .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
+                        .setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
                         .setCallbackType(android.bluetooth.le.ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
                         .build()
 

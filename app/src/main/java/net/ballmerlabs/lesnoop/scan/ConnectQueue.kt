@@ -2,6 +2,7 @@ package net.ballmerlabs.lesnoop.scan
 
 import android.bluetooth.BluetoothGatt.GATT_SUCCESS
 import android.content.SharedPreferences
+import androidx.work.impl.schedulers
 import com.jakewharton.rxrelay3.PublishRelay
 import com.polidea.rxandroidble3.RxBleDevice
 import com.polidea.rxandroidble3.exceptions.BleAlreadyConnectedException
@@ -22,17 +23,23 @@ import javax.inject.Named
 import javax.inject.Provider
 import javax.inject.Singleton
 
+data class Contained(
+    val disp: Disposable,
+    var exists: Boolean
+)
+
 @Singleton
 class ConnectQueue @Inject constructor(
     val prefs: SharedPreferences,
     val state: Provider<BroadcastReceiverState>,
     @param:Named(Module.TIMEOUT_SCHEDULER)
-    val timeoutScheduler: Scheduler
+    val timeoutScheduler: Scheduler,
+    val ignoreHelper: ConnectIgnoreHelper
 )  {
 
     private val connectedStats = PublishRelay.create<Int>()
 
-    private val inflight = ConcurrentHashMap<String, Disposable>()
+    private val inflight = ConcurrentHashMap<String, Contained>()
 
     fun observeConnected(): Observable<Int> {
         return connectedStats
@@ -42,48 +49,56 @@ class ConnectQueue @Inject constructor(
         val device = result.bleDevice
         val max = prefs.getInt(ScannerFactory.PREF_MAX_CONNECTION, 7)
         if (inflight.size <= max) {
-             val res = inflight.putIfAbsent(device.macAddress,   value
-                 .timeout(prefs.getLong(ScannerFactory.PREF_CONNECT_TIMEOUT, 7), TimeUnit.SECONDS, timeoutScheduler)
-                 .doFinally { inflight.remove(device.macAddress) }
-                 .doOnDispose { inflight.remove(device.macAddress) }
-                 .onErrorResumeNext { err: Throwable ->
-                     when(err) {
-                         is BleDisconnectedException -> {
-                             when (err.state) {
-                                 GATT_SUCCESS -> Single.just(true)
-                                 else -> Single.error(err)
-                             }
-                         }
-                         else -> Single.error(err)
+           val res = inflight.compute(device.macAddress) { k, v ->
+               when(v) {
+                   null -> Contained(disp =  value
+                   .timeout(prefs.getLong(ScannerFactory.PREF_CONNECT_TIMEOUT, 7), TimeUnit.SECONDS, timeoutScheduler)
+                   .doFinally { inflight.remove(device.macAddress) }
+                   .doOnDispose { inflight.remove(device.macAddress) }
+                   .onErrorResumeNext { err: Throwable ->
+                       when(err) {
+                           is BleDisconnectedException -> {
+                               when (err.state) {
+                                   GATT_SUCCESS -> Single.just(true)
+                                   else -> Single.error(err)
+                               }
+                           }
+                           else -> Single.error(err)
 
-                     }
-                 }
-                 .subscribe(
-                     { v ->
-                         Timber.w("connect success!")
-                         // shutdown()
-                     },
-                     { err ->
-                         when (err) {
-//                                is BleDisconnectedException -> {
-//                                    when (err.state) {
-//                                        133 -> shutdown()
-//                                        else -> Unit
-//                                    }
-//                                }
+                       }
+                   }
+                   .subscribe(
+                       { v ->
+                           Timber.w("connect success!")
+                           // shutdown()
+                       },
+                       { err ->
+                           ignoreHelper.forget(result.bleDevice.macAddress)
+                           when (err) {
+//                               is BleDisconnectedException -> {
+//                                   when (err.state) {
+//                                       133 -> ignoreHelper.forget(device.macAddress)
+//                                       else -> Unit
+//                                   }
+//                               }
 
 
-                             is BleAlreadyConnectedException -> {
-                                 shutdown()
-                             }
+                               is BleAlreadyConnectedException -> {
+                                   ignoreHelper.shouldIgnore(device.macAddress)
+                               }
 
-                             else -> Unit
-                         }
-                         Timber.e(" ${device.macAddress} queue connect error $err")
-                     }
+                               else -> Unit
+                           }
+                           Timber.e(" ${device.macAddress} queue connect error $err")
+                       }
 
-                 ))
-            if (res != null) {
+                   ), exists = false)
+                   else -> v.apply {
+                       exists = true
+                   }
+               }
+           }
+            if (res?.exists?:true) {
                 state.get().insertWithoutConnecting(result, legacy)
             }
 
@@ -96,10 +111,10 @@ class ConnectQueue @Inject constructor(
     fun shutdown() {
         val values = inflight.values.toList()
         values.forEach { v ->
-            v.dispose()
+            v.disp.dispose()
         }
 
         inflight.clear()
-        connectedStats.accept(inflight.size)
+        connectedStats.accept(0)
     }
 }
