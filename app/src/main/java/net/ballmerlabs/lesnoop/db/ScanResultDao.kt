@@ -39,11 +39,11 @@ interface ScanResultDao {
     fun getMacs(): Observable<List<String>>
 
 
-    @Query("SELECT connected FROM scan_results WHERE macAddress = :mac")
-    fun getConnected(mac: String): Single<Boolean>
+    @Query("SELECT connected FROM scan_results WHERE connected AND macAddress = :mac")
+    fun getConnected(mac: String): Maybe<Boolean>
 
 
-    fun attemptConnect(mac: String): Single<Boolean> {
+    fun attemptConnect(mac: String): Maybe<Boolean> {
         return setConnectAttempted(mac).andThen(getConnected(mac))
     }
 

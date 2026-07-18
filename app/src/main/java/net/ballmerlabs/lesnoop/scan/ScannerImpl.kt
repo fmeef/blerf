@@ -403,6 +403,7 @@ class ScannerImpl @Inject constructor(
             .flatMap { scanResult ->
                 val mac = scanResult.second.bleDevice.macAddress
                 database.attemptConnect(mac)
+                    .defaultIfEmpty(false)
                     .subscribeOn(dbScheduler)
                     .flatMap { connected ->
                         if (!connected) {
